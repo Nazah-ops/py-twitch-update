@@ -1,0 +1,9 @@
+services:
+  api:
+    build: .
+    container_name: py-twitch
+    volumes:
+      - .:/app
+      - /app/files/clips
+    ports:
+      - "8000:8000"
