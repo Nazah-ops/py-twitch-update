@@ -12,8 +12,10 @@ from moviepy.editor import *
 
 
 #Loading environment variables
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = join(os.path.abspath(os.curdir), '.env')
 load_dotenv(dotenv_path)
+
+print(dotenv_path)
 
 logger.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
@@ -30,7 +32,6 @@ def get_twitch_token():
     }
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     response = requests.post("https://id.twitch.tv/oauth2/token", headers=headers, data=payload)
-
     return json.loads(response.text)["access_token"]
 
 
