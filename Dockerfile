@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY . /app
 
-RUN apt update && apt install ffmpeg -y
+RUN apt update &&\
+    apt install ffmpeg -y \
+    apt-get install build-essential
+
 
 RUN pip install -r requirements.txt
 
