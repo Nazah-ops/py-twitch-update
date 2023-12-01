@@ -5,3 +5,5 @@ moviepy
 notebook
 opencv-python
 tensorflow
+tensorrt
+face-recognition
