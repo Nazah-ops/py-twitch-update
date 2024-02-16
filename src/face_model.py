@@ -6,14 +6,16 @@ from hide_print import HiddenPrints
 
 class FaceModel:
 
-    @staticmethod
-    def read_video_emotion(video: str) -> dict:
+    def __init__(self) -> None:
+        pass
+
+    def read_video_emotion(self, video: str) -> dict:
 
         vidcap = cv2.VideoCapture(f'/app/files/clips/{video}')
         success,image = vidcap.read()
         
-        if not success:
-            raise Exception("Video not correctly loaded, presumably not there")
+        if success == False:
+            raise Exception("Video not correctly loaded, presumably not there: " + video)
         
         results_percentage = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'neutral': 0, 'sad': 0, 'surprise': 0}
         labels = {0 : 'angry', 1 : 'disgust', 2 : 'fear', 3 : 'happy', 4 : 'neutral', 5 : 'sad', 6 : 'surprise'}
@@ -64,3 +66,19 @@ class FaceModel:
             results_percentage[labels[pred.argmax()]] += 1
 
         return results_percentage
+    
+    def happy_video(self, video, threshhold) -> bool:
+        emotions = self.read_video_emotion(video)
+        happy_count = emotions["happy"]
+        total_count = 0
+        for emotion, count in emotions.items():
+            total_count = total_count + count
+
+        if happy_count == 0 or total_count == 0:
+            return False
+
+        percentage = (happy_count / total_count) * 100
+        
+        return percentage > threshhold
+
+    

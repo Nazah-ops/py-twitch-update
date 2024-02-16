@@ -4,5 +4,7 @@ python-dotenv
 moviepy
 notebook
 opencv-python
-tensorflow
 face-recognition
+selenium
+keras
+tensorflow

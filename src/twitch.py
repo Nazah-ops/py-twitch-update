@@ -15,7 +15,7 @@ class Twitch:
         
         #Sending request to Twitch to get token credential
         payload = {
-            'client_id' : os.environ.get("CLIENT_ID"),
+            'client_id' : os.environ.get('CLIENT_ID'),
             'client_secret': os.environ.get("CLIENT_SECRET"),
             'grant_type': 'client_credentials'
         }
@@ -26,7 +26,7 @@ class Twitch:
     @staticmethod
     def get_streamers():
         '''
-        Retreive from a third party website the list of the most watched streamers
+        Retreive from a third party website the list of the most watched streamers, the first 100
         Returns a list of strings
         '''
         results = []
@@ -66,15 +66,15 @@ class Twitch:
         request = requests.get(f'https://api.twitch.tv/helix/clips', headers=self.headers, params=params)
         return json.loads(request.text)["data"]
 
-    def download_clip(clip):
-        path = f'files/clips/{clip["title"]}.mp4'
+    def download_clip(self,clip):
+        path = f'{clip["title"]}.mp4'.replace("/","slash")
         index = clip["thumbnail_url"].find('-preview')
         clip_url = clip["thumbnail_url"][:index] + '.mp4'
         r = requests.get(clip_url)
 
         if r.headers['Content-Type'] == 'binary/octet-stream':
             if not os.path.exists('files/clips'): os.makedirs('files/clips')
-            with open(path, 'wb') as f:
+            with open("/app/files/clips/" + path, 'wb') as f:
                 f.write(r.content)
             return path
         else:

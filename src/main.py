@@ -5,6 +5,7 @@ from twitch import Twitch
 from movie import Movie
 from face_model import FaceModel
 
+import os
 #Loading environment variables
 time = 2 * 60
 
@@ -16,6 +17,7 @@ def dump_json(data, path):
 
 
 def download_batch_rank():
+    face_model = FaceModel()
     twitch = Twitch()
     clips = []
     video_time = 0
@@ -32,18 +34,21 @@ def download_batch_rank():
         if video_time > time:
             break
         for clip in clips_downloaded:
-            video_time += float(clip["duration"])
-            clips.append(twitch.download_clip(clip))
-            
+            downloaded_clip = twitch.download_clip(clip)
+            if(face_model.happy_video(downloaded_clip, 20)):
+                video_time += float(clip["duration"])
+                clips.append(downloaded_clip)
+           
     return clips
 
 
 def main():
-    movie = Movie(2)
+    movie = Movie(transition_time = 2)
     clips = download_batch_rank()
     Movie.fade_all_video(clips)
     movie.overlay_video("files/clips/final_output.mp4", "files/intro.mov")
 
-#main()
-
-FaceModel.read_video_emotion('ner.mp4')
+    #TBD /app/files/output.mp4
+    #TBD upload directly to youtube
+    
+main()
