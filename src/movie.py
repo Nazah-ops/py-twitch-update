@@ -7,10 +7,10 @@ class Movie:
         self.transition_time = transition_time
         
     def fade_all_video(self, clips: [str]):
-        video_clips = [VideoFileClip(clips.pop(0))]
+        video_clips = [VideoFileClip("/app/files/clips/" + clips.pop(0))]
         
         for clip in clips:
-            video_clips.append(VideoFileClip("/app/files/clips" + clip).crossfadein(self.transition_time))
+            video_clips.append(VideoFileClip("/app/files/clips/" + clip).crossfadein(self.transition_time))
 
         final = concatenate_videoclips(video_clips, padding=-self.transition_time, method="compose")
         final.write_videofile("files/clips/final_output.mp4")

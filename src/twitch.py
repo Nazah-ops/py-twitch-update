@@ -1,11 +1,12 @@
-import requests
-import os
-import json
 import datetime
-
+import json
+import os
 from os.path import join
-from dotenv import load_dotenv
+
+import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
 
 class Twitch:
     
@@ -31,7 +32,7 @@ class Twitch:
         '''
         results = []
         request = requests.get('https://www.twitchmetrics.net/channels/viewership?game=League+of+Legends&lang=en&page=1')
-        parsed_html = BeautifulSoup(request.text)
+        parsed_html = BeautifulSoup(request.text, features="html.parser")
 
         for name in parsed_html.body.find_all('h5', attrs={'class':'mr-2 mb-0'}):
             results.append(name.get_text())
@@ -67,16 +68,43 @@ class Twitch:
         return json.loads(request.text)["data"]
 
     def download_clip(self,clip):
-        path = f'{clip["title"]}.mp4'.replace("/","slash")
+        file = f'{clip["title"]}.mp4'.replace("/","slash").replace(" ","")
+        path = "/app/files/clips/" + file;
+
+
         index = clip["thumbnail_url"].find('-preview')
         clip_url = clip["thumbnail_url"][:index] + '.mp4'
         r = requests.get(clip_url)
 
-        if r.headers['Content-Type'] == 'binary/octet-stream':
-            if not os.path.exists('files/clips'): os.makedirs('files/clips')
-            with open("/app/files/clips/" + path, 'wb') as f:
-                f.write(r.content)
-            return path
-        else:
+        if r.headers['Content-Type'] != 'binary/octet-stream':
             raise Exception(f'Failed to download clip from thumb: {clip["thumbnail_url"]}')
+
+
+        if not os.path.exists('files/clips'): os.makedirs('files/clips')
+
+        with open(path, 'wb') as f:
+            f.write(r.content)
+
+        #Get video length
+        import cv2
+        video = cv2.VideoCapture(path)
+
+        duration = video.get(cv2.CAP_PROP_POS_MSEC)
+
+        #Slice video from last 3 seconds
+        sliced = "sliced" + file
+        slicedPath = "/app/files/clips/" + sliced
+
+        from moviepy.editor import VideoFileClip
+
+        # Load the video clip
+        video_clip = VideoFileClip(path)
+
+        # Slice the video clip
+        sliced_clip = video_clip.subclip(duration, duration - ((duration/100) * 20))
+
+        # Write the sliced clip to a new file
+        sliced_clip.write_videofile(slicedPath, codec="libx264", audio_codec="aac")
+
+        return sliced
         
