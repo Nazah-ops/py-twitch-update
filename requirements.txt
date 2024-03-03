@@ -3,7 +3,6 @@ requests
 python-dotenv
 moviepy
 notebook
-opencv-python
 face-recognition
 selenium
 keras
