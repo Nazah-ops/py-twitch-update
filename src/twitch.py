@@ -1,18 +1,15 @@
 import datetime
 import json
 import os
-from os.path import join
 
 import requests
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
+
 
 
 class Twitch:
     
     def __init__(self):
-        dotenv_path = join(os.path.abspath(os.curdir), '.env')
-        load_dotenv(dotenv_path)
         
         #Sending request to Twitch to get token credential
         payload = {
@@ -68,7 +65,7 @@ class Twitch:
         return json.loads(request.text)["data"]
 
     def download_clip(self,clip):
-        file = f'{clip["title"]}.mp4'.replace("/","slash").replace(" ","")
+        file = ''.join(filter(str.isalpha, f'{clip["title"]}')) + ".mp4"
         path = "/app/files/clips/" + file;
 
 
@@ -86,10 +83,16 @@ class Twitch:
             f.write(r.content)
 
         #Get video length
-        import cv2
-        video = cv2.VideoCapture(path)
+        import subprocess
+        def get_length(filename):
+            result = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
+                                    "format=duration", "-of",
+                                    "default=noprint_wrappers=1:nokey=1", filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
+            return float(result.stdout)
 
-        duration = video.get(cv2.CAP_PROP_POS_MSEC)
+        duration = get_length(path)
 
         #Slice video from last 3 seconds
         sliced = "sliced" + file
@@ -101,7 +104,7 @@ class Twitch:
         video_clip = VideoFileClip(path)
 
         # Slice the video clip
-        sliced_clip = video_clip.subclip(duration, duration - ((duration/100) * 20))
+        sliced_clip = video_clip.subclip(((duration/100) * 20), duration - ((duration/100) * 20))
 
         # Write the sliced clip to a new file
         sliced_clip.write_videofile(slicedPath, codec="libx264", audio_codec="aac")

@@ -3,13 +3,16 @@ import json
 import logging
 import logging as logger
 import os
+from os.path import join
+from dotenv import load_dotenv
 
 from face_model import FaceModel
 from movie import Movie
 from twitch import Twitch
 
 # Loading environment variables
-time = 2 * 60
+time = 8 * 60
+output = "files/clips/final_output.mp4"
 
 logging.basicConfig(format="%(asctime)-15s %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -49,6 +52,9 @@ def download_batch_rank():
 
 def main():
 
+    dotenv_path = join(os.path.abspath(os.curdir), '.env')
+    load_dotenv(dotenv_path)
+
     logger.info("Starting Program")
     # Inizializzazione oggetto per concatenazione dei video
     movie = Movie(transition_time=1)
@@ -63,18 +69,16 @@ def main():
     movie.fade_all_video(clips)
 
     # Mette la intro
-    movie.overlay_video("files/clips/final_output.mp4",
-                        "files/intro.mov")
+    movie.overlay_video(output, "files/intro.mov")
     # TBD /app/files/output.mp4
     # TBD upload directly to youtube
+    youtube = Youtube()
+    youtube.upload(video_path=output, title= "Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
 
 
-# main()
+main()
 
 
-youtube = Youtube()
-youtube.updateCookies()
-# youtube.upload(video_path="/app/files/output.mp4", title= "Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
 
 # TEST
 '''import os
