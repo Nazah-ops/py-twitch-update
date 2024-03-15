@@ -1,0 +1,9 @@
+requests
+python-dotenv
+moviepy
+notebook
+face-recognition
+selenium
+keras
+tensorflow
+opencv-python

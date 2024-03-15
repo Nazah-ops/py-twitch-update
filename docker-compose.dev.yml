@@ -1,0 +1,13 @@
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: ./deploy/Dockerfile.dev
+    container_name: py-twitch-dev
+    volumes:
+      - ./package:/app
+      - /app/files/clips
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=DEV
