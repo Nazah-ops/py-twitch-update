@@ -16,6 +16,7 @@ class Twitch:
             'grant_type': 'client_credentials'
         }
         response = requests.post("https://id.twitch.tv/oauth2/token", headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=payload)
+        print(response.text)
         token = json.loads(response.text)["access_token"]
         self.headers = {'Authorization': f'Bearer {token}', 'Client-Id': os.environ.get("CLIENT_ID")}
 
@@ -63,9 +64,8 @@ class Twitch:
         return json.loads(request.text)["data"]
 
     def download_clip(self,clip):
-        from pathlib import Path
         file = ''.join(filter(str.isalpha, f'{clip["title"]}')) + ".mp4"
-        path = str(Path(dirname(__file__)).parent.absolute()) + "/files/clips/" + file;
+        path = "/app/files/clips/" + file;
 
         index = clip["thumbnail_url"].find('-preview')
         clip_url = clip["thumbnail_url"][:index] + '.mp4'
@@ -93,7 +93,7 @@ class Twitch:
         duration = get_length(path)
 
         #Slice video from last 3 seconds
-        slicedPath = f'{os.environ.get("BASE_PATH")}/files/clips/sliced{file}'
+        slicedPath = f'/app/files/clips/sliced{file}'
 
         from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
         startTime = (round(duration/100) * 20) #Cut the first 20 percent of the video

@@ -5,14 +5,19 @@ import logging as logger
 import os
 from os.path import join, dirname
 from dotenv import load_dotenv
+from title import TitleGeneration
 
 from face_model import FaceModel
 from movie import Movie
 from twitch import Twitch
 
 # Loading environment variables
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 time = 1 * 60
 output = "files/clips/final_output.mp4"
+twitch = Twitch()
+youtube = Youtube()
 
 logging.basicConfig(format="%(asctime)-15s %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -23,12 +28,7 @@ def dump_json(data, path):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-def download_batch_rank():
-    face_model = FaceModel()
-    twitch = Twitch()
-    clips = []
-    video_time = 0
-
+def get_clips_metadata():
     streamers = Twitch.get_streamers()
 
     for streamer in streamers:
@@ -38,38 +38,47 @@ def download_batch_rank():
             continue
 
         clips_downloaded = twitch.clips_from_broadcaster_id(streamer_id)[:3]
+    return clips_downloaded
+
+def download_batch_rank(clips_metadata):
+    face_model = FaceModel()
+    clips = []
+    video_time = 0
+
+    for clip in clips_metadata:
         if video_time > time:
             break
-        for clip in clips_downloaded:
-            if video_time > time:
-                break
-            downloaded_clip = twitch.download_clip(clip)
+        downloaded_clip = twitch.download_clip(clip)
 
-            video_time += float(clip["duration"])
-            clips.append(downloaded_clip)
-            # if (face_model.happy_video(downloaded_clip, 20)):
+        video_time += float(clip["duration"])
+        clips.append(downloaded_clip)
+        # if (face_model.happy_video(downloaded_clip, 20)):
 
     return clips
 
 
 def main():
-    dotenv_path = join(dirname(__file__), '.env')
-    load_dotenv(dotenv_path)
+    
 
     # Inizializzazione oggetto per concatenazione dei video
     movie = Movie(transition_time=1)
 
+    #Get the metadata, indicating the data about the clip (e.g. title, URI, duration), but not the clip itself
+    clips_metadata = get_clips_metadata()
+
+    #Generate the title
+    title = TitleGeneration.generateTitle(' '.join([clip["title"] for clip in clips_metadata]))
+
     # Download dei video
-    clips = download_batch_rank()
+    clips = download_batch_rank(clips_metadata)
 
     # Mette le transizioni per i video
     faded_video = movie.fade_all_video(clips)
-    
+
     # Mette la intro
-    movie.overlay_video(faded_video, f'''{os.environ.get("BASE_PATH")}/files/intro.mov''')
+    movie.overlay_video(faded_video, f'''/app/files/intro.mov''')
     
-    youtube = Youtube()
-    youtube.upload(video_path=os.environ.get("OUTPUT"), title= "Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
+    youtube.upload(video_path=os.environ.get("OUTPUT"), title= title, description="Follow me!", thumbnail_path=None)
 
 
 main()
