@@ -13,6 +13,8 @@ RUN apt update &&\
     apt-get install -y wget bzip2 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev &&\
     rm -rf /var/lib/apt/lists/*
 
+RUN pip install cmake
+
 RUN pip install -r requirements.prod.txt
 
 CMD /usr/local/bin/python /app/package/src/main.py

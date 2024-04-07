@@ -25,7 +25,7 @@ class Youtube:
     def upload(self, video_path, title, description, thumbnail_path):
 
         #Initializing the WebDriver
-        profileFolder = f'{os.environ.get("BASE_PATH")}/files/profiles/youtube'
+        profileFolder = '/app/files/profiles/youtube'
         options = webdriver.FirefoxOptions()
         options.add_argument('--headless')
         options.add_argument("-profile")

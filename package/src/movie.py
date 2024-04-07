@@ -8,14 +8,14 @@ class Movie:
         self.transition_time = transition_time
         
     def fade_all_video(self, clips: [str]):
-        path_to_file = os.environ.get("BASE_PATH") + "/files/clips/final_output.mp4"
+        path_to_file = "/app/files/clips/final_output.mp4"
         video_clips = [VideoFileClip(clips.pop(0))]
         
         for clip in clips:
             video_clips.append(VideoFileClip(clip).crossfadein(self.transition_time))
 
         final = concatenate_videoclips(video_clips, padding=-self.transition_time, method="compose")
-        final.write_videofile(os.environ.get("BASE_PATH") + "/files/clips/final_output.mp4")
+        final.write_videofile("/app/files/clips/final_output.mp4")
         return path_to_file
 
     @staticmethod
