@@ -2,8 +2,9 @@ requests
 python-dotenv
 moviepy
 notebook
-face-recognition
+#face-recognition
+webdriver-manager
 selenium
-keras
-tensorflow
-opencv-python
+#keras
+#tensorflow
+#opencv-python
