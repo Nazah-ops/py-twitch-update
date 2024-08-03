@@ -1,75 +1,77 @@
-from youtube import Youtube
 import json
 import logging
 import logging as logger
 import os
-from os.path import join, dirname
-from dotenv import load_dotenv
+from os.path import dirname, join
 
-from face_model import FaceModel
-from movie import Movie
-from twitch import Twitch
+from dotenv import load_dotenv
+# from face_model import FaceModel
+from movie import VideoEditor
+from twitch import TwitchAPI
+from youtube import YoutubeAPI
 
 # Loading environment variables
-time = 1 * 60
-output = "files/clips/final_output.mp4"
+TOTAL_VIDEO_TIME = 1 * 60
 
 logging.basicConfig(format="%(asctime)-15s %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-def dump_json(data, path):
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+def is_video_long_enough(total_duration):
+    total_duration > TOTAL_VIDEO_TIME
 
 
-def download_batch_rank():
-    face_model = FaceModel()
-    twitch = Twitch()
-    clips = []
-    video_time = 0
+def get_clips_from_streamer(streamer_name: str):
+    twitch_api = TwitchAPI()
+    clips_time = 0
+    streamer_id = twitch_api.convert_name_to_id(streamer_name)
+    if streamer_id == None:
+        return
 
-    streamers = Twitch.get_streamers()
+    url_clips = twitch_api.get_clips_url_from_streamer(streamer_id)
 
-    for streamer in streamers:
-        streamer_id = twitch.convert_name_to_id(streamer)
+    for url in url_clips[:2]:
+        clips_time += float(url["duration"])
+        downloaded_clip = twitch_api.download_clip(url)
 
-        if streamer_id == None:
-            continue
+    return [clips_time, downloaded_clip]
 
-        clips_downloaded = twitch.clips_from_broadcaster_id(streamer_id)[:3]
-        if video_time > time:
+
+def download_clips_from_twitch():
+    paths = []
+    popular_ordered_streamer_names = TwitchAPI.get_most_popular_streamers()
+    total_time = 0
+
+    for streamer_name in popular_ordered_streamer_names:
+
+        if is_video_long_enough(total_time):
             break
-        for clip in clips_downloaded:
-            if video_time > time:
-                break
-            downloaded_clip = twitch.download_clip(clip)
 
-            video_time += float(clip["duration"])
-            clips.append(downloaded_clip)
-            # if (face_model.happy_video(downloaded_clip, 20)):
+        clips_time, downloaded_clips_paths = get_clips_from_streamer(
+            streamer_name)
+        total_time += clips_time
+        paths = paths + downloaded_clips_paths
 
-    return clips
+    return paths
 
 
 def main():
-    dotenv_path = join(dirname(__file__), '.env')
-    load_dotenv(dotenv_path)
+    env_path = join(dirname(__file__), '.env')
+    load_dotenv(env_path)
 
-    # Inizializzazione oggetto per concatenazione dei video
-    movie = Movie(transition_time=1)
+    video_editor = VideoEditor()
 
-    # Download dei video
-    clips = download_batch_rank()
+    local_paths_clips = download_clips_from_twitch()
 
-    # Mette le transizioni per i video
-    faded_video = movie.fade_all_video(clips)
-    
-    # Mette la intro
-    movie.overlay_video(faded_video, f'''{os.environ.get("BASE_PATH")}/files/intro.mov''')
-    
-    youtube = Youtube()
-    youtube.upload(video_path=os.environ.get("OUTPUT"), title= "Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
+    concat_clip = video_editor.concatenate_fade_video(
+        local_paths_clips, transition_time=1)
+
+    video_editor.add_intro_to_video(
+        concat_clip, f'''{os.environ.get("BASE_PATH")}/files/intro.mov''')
+
+    youtube_api = YoutubeAPI()
+    youtube_api.upload_to_channel(video_path=os.environ.get(
+        "OUTPUT"), title="Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
 
 
 main()
