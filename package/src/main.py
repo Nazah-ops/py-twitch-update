@@ -5,6 +5,7 @@ import os
 from os.path import dirname, join
 
 from dotenv import load_dotenv
+
 # from face_model import FaceModel
 from movie import VideoEditor
 from twitch import TwitchAPI
@@ -47,10 +48,12 @@ def download_clips_from_twitch():
         if is_video_long_enough(total_time):
             break
 
-        clips_time, downloaded_clips_paths = get_clips_from_streamer(
-            streamer_name)
-        total_time += clips_time
-        paths = paths + downloaded_clips_paths
+        try:
+            clips_time, downloaded_clips_paths = get_clips_from_streamer(streamer_name)
+            total_time += clips_time
+            paths.append(downloaded_clips_paths)
+        finally:
+            continue
 
     return paths
 
