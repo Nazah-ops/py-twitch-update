@@ -49,7 +49,8 @@ def download_clips_from_twitch():
             break
 
         try:
-            clips_time, downloaded_clips_paths = get_clips_from_streamer(streamer_name)
+            clips_time, downloaded_clips_paths = get_clips_from_streamer(
+                streamer_name)
             total_time += clips_time
             paths.append(downloaded_clips_paths)
         finally:
@@ -64,17 +65,20 @@ def main():
 
     video_editor = VideoEditor()
 
-    local_paths_clips = download_clips_from_twitch()
+    clips = download_clips_from_twitch()
 
-    concat_clip = video_editor.concatenate_fade_video(
-        local_paths_clips, transition_time=1)
+    video = video_editor.concatenate_fade_video(
+        clips, transition_time=1)
 
     video_editor.add_intro_to_video(
-        concat_clip, f'''{os.environ.get("BASE_PATH")}/files/intro.mov''')
+        video, f'{os.environ.get("BASE_PATH")}/files/intro.mov')
 
     youtube_api = YoutubeAPI()
-    youtube_api.upload_to_channel(video_path=os.environ.get(
-        "OUTPUT"), title="Crack Highlight - League Of Legends #1", description="Follow me!", thumbnail_path=None)
+    youtube_api.upload(
+        video_file=os.environ.get("OUTPUT"),
+        title="Crack Highlight - League Of Legends #1",
+        description="Follow me!",
+        thumbnail_path=None)
 
 
 main()

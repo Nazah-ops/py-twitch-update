@@ -1,101 +1,64 @@
-import os
-import time
-
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+import google_auth_oauthlib
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 
 class YoutubeAPI:
 
     def __init__(self) -> None:
+        self.SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+        self.category_id = "22"  # Category ID (22 is for 'People & Blogs')
+        self.privacy_status = "public"  # Options: "public", "private", "unlisted"
+
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'client_secret.json', self.SCOPES)
+
+        credentials = flow.run_local_server(port=0)
+        self.youtube_api = build('youtube', 'v3', credentials=credentials)
+
         return
 
-    def click(self, driver, element):
-        delay = 5  # seconds
+    def upload_video(self, video_file, title, description):
+        # Create a request to upload the video
+        body = {
+            "snippet": {
+                "title": title,
+                "description": description,
+                "categoryId": self.category_id
+            },
+            "status": {
+                "privacyStatus": self.privacy_status
+            }
+        }
+        media_body = MediaFileUpload(video_file, chunksize=-1, resumable=True)
+        request = self.youtube_api.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media_body)
+
+        # Execute the request
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"Uploaded {int(status.progress() * 100)}%")
+
+        return response
+
+    def upload_thumbnail(self, video_id, file_path):
+        request = self.youtube_api.thumbnails().set(
+            videoId=video_id,
+            media_body=file_path
+        )
+        response = request.execute()
+        print('Thumbnail uploaded successfully:', response)
+
+    def upload(self, video_file, title, description, thumbnail_file):
         try:
-            myElem = WebDriverWait(driver, delay).until(
-                EC.presence_of_element_located((By.XPATH, element)))
-            time.sleep(2)
-            myElem.click()
-        except TimeoutException:
-            print("Loading took too much time!")
-
-    def upload_to_channel(self, video_path, title, description, thumbnail_path):
-
-        # Initializing the WebDriver
-        profileFolder = f'{os.environ.get("BASE_PATH")}/files/profiles/youtube'
-        options = webdriver.FirefoxOptions()
-        options.add_argument('--headless')
-        options.add_argument("-profile")
-        options.add_argument(profileFolder)
-        driver = webdriver.Firefox(options=options)
-
-        # Refresh page to see the updated page
-        driver.get("https://www.youtube.com/upload")
-
-        # Inputing the file
-        driver.find_element(
-            By.XPATH, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-uploads-file-picker/div/input').send_keys(video_path)
-
-        time.sleep(5)
-
-        # Title of the video
-        title_element = driver.find_element(By.XPATH, '//*[@id="textbox"]')
-        title_element.clear()
-        title_element.send_keys(title)
-
-        time.sleep(5)
-
-        # Description of the video
-        # Description of the video
-        description_element = driver.find_element(
-            By.CSS_SELECTOR, '#description-textarea > ytcp-form-input-container:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > ytcp-social-suggestion-input:nth-child(1) > div:nth-child(1)')
-        description_element.clear()
-        description_element.send_keys(description)
-
-        time.sleep(5)
-
-        # Thumbnail of the video
-        # self.driver.find_element(By.XPATH, '//*[@id="select-button"]').send_keys('/app/files/thumbnail/g10IqBGyy8.png')
-
-        # It's not made for kids
-        self.click(
-            driver, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-ve/ytcp-video-metadata-editor/div/ytcp-video-metadata-editor-basics/div[5]/ytkc-made-for-kids-select/div[4]/tp-yt-paper-radio-group/tp-yt-paper-radio-button[2]')
-
-        # Next to video elements
-        self.click(driver, '//*[@id="next-button"]')
-
-        # Next to checks
-        self.click(driver, '//*[@id="next-button"]')
-
-        time.sleep(5)
-
-        # Check copyright
-        copyright_element = driver.find_element(
-            By.XPATH, '//*[@id="results-description"]')
-        if copyright_element.text != 'No issues found':
-            print("mandare errore")
-
-        time.sleep(5)
-
-        # Next to visibility
-        self.click(driver, '//*[@id="next-button"]')
-
-        time.sleep(5)
-
-        # Put on visible
-        self.click(
-            driver, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-uploads-review/div[2]/div[1]/ytcp-video-visibility-select/div[2]/tp-yt-paper-radio-group/tp-yt-paper-radio-button[3]')
-
-        time.sleep(5)
-
-        # Get video link
-        # video_link = driver.find_element(By.XPATH, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-uploads-review/div[3]/ytcp-video-info/div/div[2]/div[1]/div[2]/span/a').text
-
-        time.sleep(5)
-
-        # Publish
-        self.click(driver, '//*[@id="done-button"]')
+            upload_response = self.upload_video(video_file, title, description)
+            self.upload_thumbnail(upload_response['id'], thumbnail_file)
+            return True
+        except Exception as e:
+            print(f"Video non caricato: {e}")
+            return False

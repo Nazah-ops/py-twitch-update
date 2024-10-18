@@ -3,7 +3,7 @@ services:
     build: 
       context: .
       dockerfile: ./deploy/Dockerfile.dev
-    container_name: py-twitch-dev
+    container_name: scraper-process
     volumes:
       - ./package:/app
       - /app/files/clips
