@@ -1,8 +1,9 @@
+import http.client
 import json
-import http.client
-from enum import Enum
-import http.client
 import urllib.parse
+import uuid
+from enum import Enum
+
 
 class ORIENTATION(Enum):
     LANDSCAPE = "landscape"
@@ -15,7 +16,6 @@ class Pexel:
 
     def get_video(self, topic,  orientation: ORIENTATION):
         url = self.get_video_query(topic,  orientation)[0]["video_files"][0]["link"]
-        print(url)
         # Parsing dell'URL per ottenere il dominio e il percorso
         parsed_url = urllib.parse.urlparse(url)
         host = parsed_url.netloc
@@ -30,11 +30,11 @@ class Pexel:
 
         # Verifica che la richiesta sia andata a buon fine
         if response.status != 200:
-            print("Errore durante il download:", response.status, response.reason)
-            return
+            raise Exception("Errore durante download del video pexel (background): ", response.status, response.reason)
         
-            
-        with open("test.mp4", "wb") as file:
+        video_name = f"{uuid.uuid4().hex[:6].upper()}.mp4"
+        
+        with open(video_name, "wb") as file:
             # Leggi i dati in blocchi per evitare di sovraccaricare la memoria
             while True:
                 data = response.read(8192)
@@ -44,7 +44,7 @@ class Pexel:
         print("Video scaricato con successo!")
         # Chiudi la connessione
         conn.close()
-
+        return video_name
 
     def get_video_query(self, topic,  orientation: ORIENTATION):
         conn = http.client.HTTPSConnection("api.pexels.com")

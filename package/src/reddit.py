@@ -22,7 +22,6 @@ class Reddit:
     def get_post_lists(self, subreddit):
         response = get(f'''https://www.reddit.com/r/{subreddit}/rising/.json''')
         data = json.loads(response.text)
-        print(data)
         return data["data"]["children"]
     
     def get_screenshot_of_post(self, post_data, image_name):
@@ -40,9 +39,9 @@ class Reddit:
         driver.implicitly_wait(5)
 
         #Remove back button
-        self.driver_remove_element("/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
+        self.driver_remove_element(driver, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
         #Remove datestamp
-        self.driver_remove_element("/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
+        self.driver_remove_element(driver, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
         
         #Make screenshot
         screenshot = driver.get_screenshot_as_png()

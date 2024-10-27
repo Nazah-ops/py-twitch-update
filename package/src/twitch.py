@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-from os.path import join, dirname
+from os.path import dirname, join
 
 import requests
 from bs4 import BeautifulSoup
@@ -16,7 +16,6 @@ class Twitch:
             'grant_type': 'client_credentials'
         }
         response = requests.post("https://id.twitch.tv/oauth2/token", headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=payload)
-        print(response.text)
         token = json.loads(response.text)["access_token"]
         self.headers = {'Authorization': f'Bearer {token}', 'Client-Id': os.environ.get("CLIENT_ID")}
 
@@ -101,4 +100,46 @@ class Twitch:
         ffmpeg_extract_subclip(path, startTime, endTime, targetname=slicedPath)
 
         return slicedPath
+    
+    def is_video_long_enough(self, total_duration, duration):
+        total_duration > duration
         
+    def get_clips_from_streamer(self, streamer_name: str):
+        clips_time = 0
+        streamer_id = self.convert_name_to_id(streamer_name)
+        if streamer_id == None:
+            return
+        url_clips = self.get_clips_url_from_streamer(streamer_id)
+        for url in url_clips[:2]:
+            clips_time += float(url["duration"])
+            downloaded_clip = self.download_clip(url)
+        return [clips_time, downloaded_clip]
+    
+    def download_clips_from_twitch(self, duration):
+        paths = []
+        popular_ordered_streamer_names = self.get_streamers()
+        total_time = 0
+        for streamer_name in popular_ordered_streamer_names:
+            if self.is_video_long_enough(total_time, duration):
+                break
+            try:
+                clips_time, downloaded_clips_paths = self.get_clips_from_streamer(
+                    streamer_name)
+                print(clips_time)
+                total_time += clips_time
+                paths.append(downloaded_clips_paths)
+            finally:
+                continue
+        return paths
+    
+    def get_clips_url_from_streamer(self, id):
+        '''Downloads the clips from a streamer from the twitch API, based also on timeframe, and sorted by views'''
+        format_time = "%Y-%m-%dT%H:%M:%SZ"
+        params = {
+            "broadcaster_id": id,
+            "started_at": (datetime.datetime.now() - datetime.timedelta(days=3)).strftime(format_time),
+            "ended_at": datetime.datetime.now().strftime(format_time)
+        }
+        request = requests.get(
+            f'https://api.twitch.tv/helix/clips', headers=self.headers, params=params)
+        return json.loads(request.text)["data"]

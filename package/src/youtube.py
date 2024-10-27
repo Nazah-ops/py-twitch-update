@@ -74,7 +74,7 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 
 
-class YoutubeAPI:
+class Youtube:
 
     def __init__(self) -> None:
         self.SCOPES = ['https://www.googleapis.com/auth/youtube.upload']

@@ -1,5 +1,6 @@
-from moviepy.editor import *
 import os
+
+from moviepy.editor import *
 
 
 class Movie:
@@ -7,7 +8,7 @@ class Movie:
     def __init__(self, transition_time: int) -> None:
         self.transition_time = transition_time
         
-    def fade_all_video(self, clips: [str]):
+    def fade_all_video(self, clips):
         path_to_file = "/app/files/clips/final_output.mp4"
         video_clips = [VideoFileClip(clips.pop(0))]
         
