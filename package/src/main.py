@@ -1,75 +1,46 @@
-import json
+import argparse
 import logging
 import logging as logger
 import os
+from http import client
 from os.path import dirname, join
 
 from dotenv import load_dotenv
-
-# from face_model import FaceModel
-from movie import VideoEditor
+from reddit import Reddit
 from twitch import TwitchAPI
-from youtube import YoutubeAPI
+# from face_model import FaceModel
+from video_editor import VideoEditor
+
+from package.src.youtube import YoutubeAPI
+
+""" from youtube import YoutubeAPI """
 
 # Loading environment variables
 TOTAL_VIDEO_TIME = 1 * 60
 
-logging.basicConfig(format="%(asctime)-15s %(message)s", level=logging.INFO,
+logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-def is_video_long_enough(total_duration):
-    total_duration > TOTAL_VIDEO_TIME
-
-
-def get_clips_from_streamer(streamer_name: str):
-    twitch_api = TwitchAPI()
-    clips_time = 0
-    streamer_id = twitch_api.convert_name_to_id(streamer_name)
-    if streamer_id == None:
-        return
-
-    url_clips = twitch_api.get_clips_url_from_streamer(streamer_id)
-
-    for url in url_clips[:2]:
-        clips_time += float(url["duration"])
-        downloaded_clip = twitch_api.download_clip(url)
-
-    return [clips_time, downloaded_clip]
-
-
-def download_clips_from_twitch():
-    paths = []
-    popular_ordered_streamer_names = TwitchAPI.get_most_popular_streamers()
-    total_time = 0
-
-    for streamer_name in popular_ordered_streamer_names:
-
-        if is_video_long_enough(total_time):
-            break
-
-        try:
-            clips_time, downloaded_clips_paths = get_clips_from_streamer(
-                streamer_name)
-            total_time += clips_time
-            paths.append(downloaded_clips_paths)
-        finally:
-            continue
-
-    return paths
-
-
 def main():
+    logging.info('Inizio processo di scraping e upload.')
+
     env_path = join(dirname(__file__), '.env')
-    load_dotenv(env_path)
+    load_dotenv("/app/keys/.env")
+
+    twitch = TwitchAPI()
+    clips = twitch.download_clips_from_twitch()
+
+    reddit = Reddit()
+    reddit.get_image("TwoSentenceHorror")
+
+    reddit.get_screenshot_of_post({
+        "name": "t3_1gau18l",
+        "url": "https://www.reddit.com/r/TwoSentenceHorror/comments/1gau18l/i_didnt_know_what_to_say_to_my_6_year_old_son/",
+    }, "test.png")
 
     video_editor = VideoEditor()
-
-    clips = download_clips_from_twitch()
-
-    video = video_editor.concatenate_fade_video(
-        clips, transition_time=1)
-
+    video = video_editor.concat_fade(clips, transition_time=1)
     video_editor.add_intro_to_video(
         video, f'{os.environ.get("BASE_PATH")}/files/intro.mov')
 
@@ -78,11 +49,10 @@ def main():
         video_file=os.environ.get("OUTPUT"),
         title="Crack Highlight - League Of Legends #1",
         description="Follow me!",
-        thumbnail_path=None)
+        thumbnail_file=None)
 
 
 main()
-
 
 # TEST
 '''import os
