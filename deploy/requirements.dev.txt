@@ -6,9 +6,9 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client 
+selenium
 #face-recognition
 #webdriver-manager
-#selenium
 #keras
 #tensorflow
 #opencv-python

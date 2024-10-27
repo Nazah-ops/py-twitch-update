@@ -1,5 +1,8 @@
-import requests
 import json
+
+import requests
+
+
 class TitleGeneration:
 
     def __init__(self) -> None:
@@ -8,7 +11,6 @@ class TitleGeneration:
 
     @staticmethod
     def generateTitle(keyword):
-        print(keyword)
         """Generates a title given a string of keywords to take as input.
         Makes a call to an third party service and gets the data as a response 
         Returns a string, wich is the AI generated title"""
