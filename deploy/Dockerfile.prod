@@ -6,7 +6,6 @@ COPY ./package /app
 
 COPY ./deploy/requirements.prod.txt requirements.prod.txt
 
-
 RUN apt update &&\
     apt install ffmpeg -y &&\
     apt-get install build-essential -y &&\

@@ -1,88 +1,61 @@
-from youtube import Youtube
-import json
+import argparse
 import logging
 import logging as logger
 import os
-from os.path import join, dirname
-from dotenv import load_dotenv
-from title import TitleGeneration
+from http import client
+from os.path import dirname, join
 
-from face_model import FaceModel
-from movie import Movie
-from twitch import Twitch
+from dotenv import load_dotenv
+from reddit import Reddit
+from title import TitleGeneration
+from twitch import TwitchAPI
+from video_editor import VideoEditor
+
+from package.src.youtube import YoutubeAPI
+
+# from face_model import FaceModel
+
+
+""" from youtube import YoutubeAPI """
 
 # Loading environment variables
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
-time = 1 * 60
-output = "files/clips/final_output.mp4"
-twitch = Twitch()
-youtube = Youtube()
+TOTAL_VIDEO_TIME = 1 * 60
 
-logging.basicConfig(format="%(asctime)-15s %(message)s", level=logging.INFO,
+logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-def dump_json(data, path):
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-
-def get_clips_metadata():
-    streamers = Twitch.get_streamers()
-
-    for streamer in streamers:
-        streamer_id = twitch.convert_name_to_id(streamer)
-
-        if streamer_id == None:
-            continue
-
-        clips_downloaded = twitch.clips_from_broadcaster_id(streamer_id)[:3]
-    return clips_downloaded
-
-def download_batch_rank(clips_metadata):
-    face_model = FaceModel()
-    clips = []
-    video_time = 0
-
-    for clip in clips_metadata:
-        if video_time > time:
-            break
-        downloaded_clip = twitch.download_clip(clip)
-
-        video_time += float(clip["duration"])
-        clips.append(downloaded_clip)
-        # if (face_model.happy_video(downloaded_clip, 20)):
-
-    return clips
-
-
 def main():
-    
+    logging.info('Inizio processo di scraping e upload.')
 
-    # Inizializzazione oggetto per concatenazione dei video
-    movie = Movie(transition_time=1)
+    env_path = join(dirname(__file__), '.env')
+    load_dotenv("/app/keys/.env")
 
-    #Get the metadata, indicating the data about the clip (e.g. title, URI, duration), but not the clip itself
-    clips_metadata = get_clips_metadata()
+    twitch = TwitchAPI()
+    clips = twitch.download_clips_from_twitch()
 
-    #Generate the title
-    title = TitleGeneration.generateTitle(' '.join([clip["title"] for clip in clips_metadata]))
+    reddit = Reddit()
+    reddit.get_image("TwoSentenceHorror")
 
-    # Download dei video
-    clips = download_batch_rank(clips_metadata)
+    reddit.get_screenshot_of_post({
+        "name": "t3_1gau18l",
+        "url": "https://www.reddit.com/r/TwoSentenceHorror/comments/1gau18l/i_didnt_know_what_to_say_to_my_6_year_old_son/",
+    }, "test.png")
 
-    # Mette le transizioni per i video
-    faded_video = movie.fade_all_video(clips)
+    video_editor = VideoEditor()
+    video = video_editor.concat_fade(clips, transition_time=1)
+    video_editor.add_intro_to_video(
+        video, f'{os.environ.get("BASE_PATH")}/files/intro.mov')
 
-    # Mette la intro
-    movie.overlay_video(faded_video, f'''/app/files/intro.mov''')
-    
-    youtube.upload(video_path=os.environ.get("OUTPUT"), title= title, description="Follow me!", thumbnail_path=None)
+    youtube_api = YoutubeAPI()
+    youtube_api.upload(
+        video_file=os.environ.get("OUTPUT"),
+        title="Crack Highlight - League Of Legends #1",
+        description="Follow me!",
+        thumbnail_file=None)
 
 
 main()
-
 
 # TEST
 '''import os

@@ -1,97 +1,249 @@
-import time
-
 import os
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+import random
+import sys
+import time
+from os.path import dirname, join
+
+import google_auth_oauthlib
+import httplib
+import httplib2
+from apiclient.discovery import build
+from apiclient.errors import HttpError
+from apiclient.http import MediaFileUpload
+from google.oauth2.service_account import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.file import Storage
+from oauth2client.tools import argparser, run_flow
+
+# Explicitly tell the underlying HTTP transport library not to retry, since
+# we are handling retry logic ourselves.
+httplib2.RETRIES = 1
+
+# Maximum number of times to retry before giving up.
+MAX_RETRIES = 10
+
+# Always retry when these exceptions are raised.
+RETRIABLE_EXCEPTIONS = (httplib2.HttpLib2Error, IOError, httplib.NotConnected,
+                        httplib.IncompleteRead, httplib.ImproperConnectionState,
+                        httplib.CannotSendRequest, httplib.CannotSendHeader,
+                        httplib.ResponseNotReady, httplib.BadStatusLine)
+
+# Always retry when an apiclient.errors.HttpError with one of these status
+# codes is raised.
+RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
+
+# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
+# the OAuth 2.0 information for this application, including its client_id and
+# client_secret. You can acquire an OAuth 2.0 client ID and client secret from
+# the Google API Console at
+# https://console.cloud.google.com/.
+# Please ensure that you have enabled the YouTube Data API for your project.
+# For more information about using OAuth2 to access the YouTube Data API, see:
+#   https://developers.google.com/youtube/v3/guides/authentication
+# For more information about the client_secrets.json file format, see:
+#   https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
+CLIENT_SECRETS_FILE = join(dirname(__file__), "client_secrets.json")
+
+# This OAuth 2.0 access scope allows an application to upload files to the
+# authenticated user's YouTube channel, but doesn't allow other types of access.
+YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
+
+# This variable defines a message to display if the CLIENT_SECRETS_FILE is
+# missing.
+MISSING_CLIENT_SECRETS_MESSAGE = """
+WARNING: Please configure OAuth 2.0
+
+To make this sample run you will need to populate the client_secrets.json file
+found at:
+
+   %s
+
+with information from the API Console
+https://console.cloud.google.com/
+
+For more information about the client_secrets.json file format, please visit:
+https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
+""" % os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                   CLIENT_SECRETS_FILE))
+
+VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 
 
-class Youtube:
-    
+class YoutubeAPI:
+
     def __init__(self) -> None:
+        self.SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+        self.category_id = "22"  # Category ID (22 is for 'People & Blogs')
+        self.privacy_status = "public"  # Options: "public", "private", "unlisted"
+
+        creds = Credentials.from_service_account_file(
+            join(dirname(__file__), 'youtube-automation.json'), scopes=self.SCOPES)
+        self.youtube_api = build('youtube', 'v3', credentials=creds)
+
         return
 
-    def click(self, driver, element):
-        delay = 5 # seconds
+    def upload_video(self, video_file, title, description):
+        # Create a request to upload the video
+        body = {
+            "snippet": {
+                "title": title,
+                "description": description,
+                "categoryId": self.category_id
+            },
+            "status": {
+                "privacyStatus": self.privacy_status
+            }
+        }
+        media_body = MediaFileUpload(video_file, chunksize=-1, resumable=True)
+        request = self.youtube_api.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media_body)
+
+        # Execute the request
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"Uploaded {int(status.progress() * 100)}%")
+
+        return response
+
+    def upload_thumbnail(self, video_id, file_path):
+        request = self.youtube_api.thumbnails().set(
+            videoId=video_id,
+            media_body=file_path
+        )
+        response = request.execute()
+        print('Thumbnail uploaded successfully:', response)
+
+    def upload(self, video_file, title, description, thumbnail_file):
         try:
-            myElem = WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, element)))
-            time.sleep(2)
-            myElem.click()
-        except TimeoutException:
-            print ("Loading took too much time!")
+            upload_response = self.upload_video(video_file, title, description)
+            """ self.upload_thumbnail(upload_response['id'], thumbnail_file) """
+            return True
+        except Exception as e:
+            print(f"Video non caricato: {e}")
+            return False
 
-    def upload(self, video_path, title, description, thumbnail_path):
+    def get_authenticated_service(args):
+        flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE,
+                                       scope=YOUTUBE_UPLOAD_SCOPE,
+                                       message=MISSING_CLIENT_SECRETS_MESSAGE)
 
-        #Initializing the WebDriver
-        profileFolder = '/app/files/profiles/youtube'
-        options = webdriver.FirefoxOptions()
-        options.add_argument('--headless')
-        options.add_argument("-profile")
-        options.add_argument(profileFolder)
-        driver = webdriver.Firefox(options=options)
+        storage = Storage("%s-oauth2.json" % sys.argv[0])
+        credentials = storage.get()
 
-        #Refresh page to see the updated page
-        driver.get("https://www.youtube.com/upload")
+        if credentials is None or credentials.invalid:
+            credentials = run_flow(flow, storage, args)
 
-        #Inputing the file
-        driver.find_element(By.XPATH, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-uploads-file-picker/div/input').send_keys(video_path)
-        
-        time.sleep(5)
+        return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
+                     http=credentials.authorize(httplib2.Http()))
 
-        #Title of the video
-        title_element = driver.find_element(By.XPATH, '//*[@id="textbox"]')
-        title_element.clear()
-        title_element.send_keys(title)
-        
-        time.sleep(5)
+    def initialize_upload(self, youtube, options):
+        tags = None
+        if options.keywords:
+            tags = options.keywords.split(",")
 
-        #Description of the video
-        #Description of the video
-        description_element = driver.find_element(By.CSS_SELECTOR, '#description-textarea > ytcp-form-input-container:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > ytcp-social-suggestion-input:nth-child(1) > div:nth-child(1)')
-        description_element.clear()
-        description_element.send_keys(description)
-        
-        time.sleep(5)
+        body = dict(
+            snippet=dict(
+                title=options.title,
+                description=options.description,
+                tags=tags,
+                categoryId=options.category
+            ),
+            status=dict(
+                privacyStatus=options.privacyStatus
+            )
+        )
 
-        #Thumbnail of the video
-        #self.driver.find_element(By.XPATH, '//*[@id="select-button"]').send_keys('/app/files/thumbnail/g10IqBGyy8.png')
-        
-        #It's not made for kids
-        self.click(driver, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-ve/ytcp-video-metadata-editor/div/ytcp-video-metadata-editor-basics/div[5]/ytkc-made-for-kids-select/div[4]/tp-yt-paper-radio-group/tp-yt-paper-radio-button[2]')
-        
-        #Next to video elements
-        self.click(driver, '//*[@id="next-button"]')
-        
-        #Next to checks
-        self.click(driver, '//*[@id="next-button"]')
+        # Call the API's videos.insert method to create and upload the video.
+        insert_request = youtube.videos().insert(
+            part=",".join(body.keys()),
+            body=body,
+            # The chunksize parameter specifies the size of each chunk of data, in
+            # bytes, that will be uploaded at a time. Set a higher value for
+            # reliable connections as fewer chunks lead to faster uploads. Set a lower
+            # value for better recovery on less reliable connections.
+            #
+            # Setting "chunksize" equal to -1 in the code below means that the entire
+            # file will be uploaded in a single HTTP request. (If the upload fails,
+            # it will still be retried where it left off.) This is usually a best
+            # practice, but if you're using Python older than 2.6 or if you're
+            # running on App Engine, you should set the chunksize to something like
+            # 1024 * 1024 (1 megabyte).
+            media_body=MediaFileUpload(
+                options.file, chunksize=-1, resumable=True)
+        )
 
-        time.sleep(5)
+        self.resumable_upload(insert_request)
 
-        #Check copyright
-        copyright_element = driver.find_element(By.XPATH, '//*[@id="results-description"]')
-        if copyright_element.text != 'No issues found':
-            print("mandare errore")
-        
-        time.sleep(5)
+    # This method implements an exponential backoff strategy to resume a
+    # failed upload.
 
+    def resumable_upload(insert_request):
+        response = None
+        error = None
+        retry = 0
+        while response is None:
+            try:
+                print("Uploading file...")
+                status, response = insert_request.next_chunk()
+                if response is not None:
+                    if 'id' in response:
+                        print("Video id '%s' was successfully uploaded." %
+                              response['id'])
+                    else:
+                        exit(
+                            "The upload failed with an unexpected response: %s" % response)
+            except HttpError as e:
+                if e.resp.status in RETRIABLE_STATUS_CODES:
+                    error = "A retriable HTTP error %d occurred:\n%s" % (
+                        e.resp.status, e.content)
+                else:
+                    raise
+            except RETRIABLE_EXCEPTIONS as e:
+                error = "A retriable error occurred: %s" % e
 
-        #Next to visibility
-        self.click(driver, '//*[@id="next-button"]')
-        
-        time.sleep(5)
+            if error is not None:
+                print(error)
+                retry += 1
+                if retry > MAX_RETRIES:
+                    exit("No longer attempting to retry.")
 
+                max_sleep = 2 ** retry
+                sleep_seconds = random.random() * max_sleep
+                print("Sleeping %f seconds and then retrying..." %
+                      sleep_seconds)
+                time.sleep(sleep_seconds)
 
-        #Put on visible
-        self.click(driver, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-uploads-review/div[2]/div[1]/ytcp-video-visibility-select/div[2]/tp-yt-paper-radio-group/tp-yt-paper-radio-button[3]')
+    if __name__ == '__main__':
+        argparser.add_argument("--file", required=True,
+                               help="Video file to upload")
+        argparser.add_argument(
+            "--title", help="Video title", default="Test Title")
+        argparser.add_argument("--description", help="Video description",
+                               default="Test Description")
+        argparser.add_argument("--category", default="22",
+                               help="Numeric video category. " +
+                               "See https://developers.google.com/youtube/v3/docs/videoCategories/list")
+        argparser.add_argument("--keywords", help="Video keywords, comma separated",
+                               default="")
+        argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
+                               default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
+        args = argparser.parse_args()
 
-        time.sleep(5)
-        
-        #Get video link
-        #video_link = driver.find_element(By.XPATH, '/html/body/ytcp-uploads-dialog/tp-yt-paper-dialog/div/ytcp-animatable[1]/ytcp-uploads-review/div[3]/ytcp-video-info/div/div[2]/div[1]/div[2]/span/a').text
-        
-        time.sleep(5)
+        if not os.path.exists(args.file):
+            exit("Please specify a valid file using the --file= parameter.")
 
-        #Publish
-        self.click(driver, '//*[@id="done-button"]')
+        youtube = get_authenticated_service(args)
+        try:
+            initialize_upload(youtube, args)
+        except HttpError as e:
+            print("An HTTP error %d occurred:\n%s" %
+                  (e.resp.status, e.content))
