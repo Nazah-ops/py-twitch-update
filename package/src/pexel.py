@@ -55,7 +55,7 @@ class Pexel:
         headers = {
             'Authorization': 'yL7ewVOVKa8nh1pR7koTTlntKO1IkNvWMoQRP4I0ANfFr0ev1F0mIAjo',
         }
-        conn.request("GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation}", {}, headers)
+        conn.request("GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation.value}", {}, headers)
         data = conn.getresponse().read().decode("utf-8")
         return json.loads(data)["videos"]
                         

@@ -1,5 +1,6 @@
 import json
 import uuid
+from enum import Enum
 from io import BytesIO
 
 from PIL import Image
@@ -8,6 +9,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
+
+class Trend(Enum):
+    RISING = "rising"
+    NEW = "new"
+    TOP = "top"
+    HOT = "hot"
 
 class Reddit:
     def __init__(self):
@@ -20,8 +27,8 @@ class Reddit:
             element.parentNode.removeChild(element);
             """, element)
     
-    def get_post_lists(self, subreddit):
-        response = get(f'''https://www.reddit.com/r/{subreddit}/rising/.json''', verify=False)
+    def get_post_lists(self, subreddit, trend: Trend):
+        response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
         data = json.loads(response.text)
         return data["data"]["children"]
 
@@ -48,22 +55,19 @@ class Reddit:
         self.remove_element(driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
         
         driver.execute_script(f"document.body.style.zoom = '{zoom * 100}%'")     # ZOOM
-        #Make screenshot
-        screenshot = driver.get_screenshot_as_png()
+
         
         #Crop to get the post only
         post_container = driver.find_element(By.CSS_SELECTOR, "#main-content")
         #Wrap words
         driver.execute_script("""
             var element = arguments[0];
-            element.style.width = '20vw';
+            element.style.width = '8vw';
         """, post_container)
         
         post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
-        
-        location = driver.execute_script("return arguments[0].getBoundingClientRect();", post)
-        print(post.size, post.location)
-        
+        #Make screenshot
+        screenshot = driver.get_screenshot_as_png()
         # Ricarica la posizione dell'elemento
         left = post.location['x']
         top = post.location['y']
@@ -77,7 +81,7 @@ class Reddit:
         driver.quit()
         
     def get_image(self, subreddit):
-        posts = self.get_post_lists(subreddit)
+        posts = self.get_post_lists(subreddit, Trend.TOP)
         picture_name = f"{uuid.uuid4().hex[:6].upper()}.png"
         self.get_screenshot_of_post(posts[0]["data"], picture_name)
         return picture_name

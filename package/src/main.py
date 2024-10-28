@@ -27,12 +27,14 @@ def main():
     reddit = Reddit()
     reddit_image = reddit.get_image("TwoSentenceHorror")
     print(reddit_image)
-    return
     pexel = Pexel();
     pexel_video = pexel.get_video("happy", Orientation.PORTRAIT);
+    video_editor = VideoEditor()
+    final_video = video_editor.image_to_center(video=pexel_video, image=reddit_image)
+    print(final_video)
+    return
     twitch = Twitch()
     clips = twitch.download_clips_from_twitch(TOTAL_VIDEO_TIME)
-    video_editor = VideoEditor()
     video = video_editor.concat_fade(clips, transition_time=1)
     video_editor.add_intro_to_video(
         video, f'{os.environ.get("BASE_PATH")}/files/intro.mov')
