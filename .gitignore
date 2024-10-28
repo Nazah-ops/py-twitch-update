@@ -163,3 +163,4 @@ package/files/profiles
 client_secret.json
 .vscode
 keys
+notebooks/
