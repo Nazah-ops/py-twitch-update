@@ -1,5 +1,7 @@
 import os
+import uuid
 
+import PIL
 from moviepy.editor import *
 
 
@@ -20,7 +22,7 @@ class VideoEditor:
         return path_to_file
 
     @staticmethod
-    def add_intro_to_video(original_video: str, overlay_video: str):
+    def intro_to_video(original_video: str, overlay_video: str):
         video_clip = VideoFileClip((original_video), target_resolution=(1080, 1920))  # b .mp4 file
         overlay_clip = VideoFileClip((overlay_video), has_mask=True, target_resolution=(1080, 1920))  # .mov file with alpha channel
 
@@ -30,3 +32,12 @@ class VideoEditor:
             os.environ.get("OUTPUT"),
             threads=6,
         )
+
+    def image_to_center(self, video, image):
+        PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+        videoFile = VideoFileClip(video)
+
+        title = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=200)
+
+        final = CompositeVideoClip([videoFile, title])
+        final.write_videofile(f"{uuid.uuid4().hex[:6].upper()}.mp4")
