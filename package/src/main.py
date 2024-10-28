@@ -3,6 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
+from pexel import Orientation, Pexel
 from reddit import Reddit
 from title import TitleGeneration
 from twitch import Twitch
@@ -14,18 +15,23 @@ TOTAL_VIDEO_TIME = 1 * 60
 
 logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
+import ssl
 
+ssl._create_default_https_context = ssl._create_unverified_context
 
 def main():
     logging.info('Inizio processo di scraping e upload.')
 
     load_dotenv("/app/keys/.env")
-    twitch = Twitch()
-    clips = twitch.download_clips_from_twitch(TOTAL_VIDEO_TIME)
 
     reddit = Reddit()
-    reddit.get_image("TwoSentenceHorror")
+    reddit_image = reddit.get_image("TwoSentenceHorror")
+    print(reddit_image)
     return
+    pexel = Pexel();
+    pexel_video = pexel.get_video("happy", Orientation.PORTRAIT);
+    twitch = Twitch()
+    clips = twitch.download_clips_from_twitch(TOTAL_VIDEO_TIME)
     video_editor = VideoEditor()
     video = video_editor.concat_fade(clips, transition_time=1)
     video_editor.add_intro_to_video(

@@ -1,4 +1,5 @@
 import json
+import uuid
 from io import BytesIO
 
 from PIL import Image
@@ -12,21 +13,24 @@ class Reddit:
     def __init__(self):
         pass
     
-    def driver_remove_element(self, driver, xpath):
-        element = driver.find_element(By.XPATH, xpath)
+    def remove_element(self, driver, by: By, path):
+        element = driver.find_element(by, path)
         driver.execute_script("""
             var element = arguments[0];
             element.parentNode.removeChild(element);
             """, element)
-        
+    
     def get_post_lists(self, subreddit):
-        response = get(f'''https://www.reddit.com/r/{subreddit}/rising/.json''')
+        response = get(f'''https://www.reddit.com/r/{subreddit}/rising/.json''', verify=False)
         data = json.loads(response.text)
         return data["data"]["children"]
-    
+
     def get_screenshot_of_post(self, post_data, image_name):
+        zoom = 3
         options = Options()
         options.add_argument("--headless")
+        options.add_argument("--width=6000")  # Set the desired width
+        options.add_argument("--height=5000")  # Set the desired height
         options.add_argument('--disable-blink-features=AutomationControlled')
         driver = webdriver.Firefox(options=options)
 
@@ -34,24 +38,37 @@ class Reddit:
 
         # Change theme to dark
         html = driver.find_element(By.XPATH, "/html")
-        driver.execute_script(f"arguments[0].className = 'theme-dark';", html)
+        driver.execute_script("arguments[0].className = 'theme-dark';", html)
         driver.execute_script("arguments[0].classList.remove('theme-light');", html)
         driver.implicitly_wait(5)
-
-        #Remove back button
-        self.driver_remove_element(driver, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
-        #Remove datestamp
-        self.driver_remove_element(driver, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
         
+        #Remove back button
+        self.remove_element(driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
+        #Remove datestamp
+        self.remove_element(driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
+        
+        driver.execute_script(f"document.body.style.zoom = '{zoom * 100}%'")     # ZOOM
         #Make screenshot
         screenshot = driver.get_screenshot_as_png()
-
+        
         #Crop to get the post only
+        post_container = driver.find_element(By.CSS_SELECTOR, "#main-content")
+        #Wrap words
+        driver.execute_script("""
+            var element = arguments[0];
+            element.style.width = '20vw';
+        """, post_container)
+        
         post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
+        
+        location = driver.execute_script("return arguments[0].getBoundingClientRect();", post)
+        print(post.size, post.location)
+        
+        # Ricarica la posizione dell'elemento
         left = post.location['x']
         top = post.location['y']
-        right = post.location['x'] + post.size['width']
-        bottom = post.location['y'] + post.size['height']
+        right = (post.location['x'] + post.size['width'])
+        bottom = (post.location['y'] + post.size['height'])
 
         #Crop the image
         im = Image.open(BytesIO(screenshot))
@@ -61,4 +78,7 @@ class Reddit:
         
     def get_image(self, subreddit):
         posts = self.get_post_lists(subreddit)
-        self.get_screenshot_of_post(posts[0]["data"], "test.png")
+        picture_name = f"{uuid.uuid4().hex[:6].upper()}.png"
+        self.get_screenshot_of_post(posts[0]["data"], picture_name)
+        return picture_name
+        
