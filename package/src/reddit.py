@@ -82,7 +82,7 @@ class Reddit:
         
     def get_image(self, subreddit):
         posts = self.get_post_lists(subreddit, Trend.TOP)
-        picture_name = f"{uuid.uuid4().hex[:6].upper()}.png"
+        picture_name = f"/app/files/{uuid.uuid4().hex[:6].upper()}.png"
         self.get_screenshot_of_post(posts[0]["data"], picture_name)
         return picture_name
         

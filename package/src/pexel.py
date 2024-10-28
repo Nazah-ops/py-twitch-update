@@ -36,7 +36,7 @@ class Pexel:
         if response.status != 200:
             raise Exception("Errore durante download del video pexel (background): ", response.status, response.reason)
         
-        video_name = f"{uuid.uuid4().hex[:6].upper()}.mp4"
+        video_name = f"/app/files/{uuid.uuid4().hex[:6].upper()}.mp4"
         
         with open(video_name, "wb") as file:
             # Leggi i dati in blocchi per evitare di sovraccaricare la memoria

@@ -40,4 +40,4 @@ class VideoEditor:
         title = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=200)
 
         final = CompositeVideoClip([videoFile, title])
-        final.write_videofile(f"{uuid.uuid4().hex[:6].upper()}.mp4")
+        final.write_videofile(f"/app/files/{uuid.uuid4().hex[:6].upper()}.mp4")
