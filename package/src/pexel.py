@@ -5,7 +5,7 @@ import uuid
 from enum import Enum
 
 
-class ORIENTATION(Enum):
+class Orientation(Enum):
     LANDSCAPE = "landscape"
     PORTRAIT = "portrait"
     SQUARE = "square"
@@ -14,7 +14,11 @@ class Pexel:
     def __init__(self):
         pass
 
-    def get_video(self, topic,  orientation: ORIENTATION):
+
+    def get_video(self, topic,  orientation: Orientation):
+        """ 
+            Downloads a video from pexel given the topic, then returns the name of the video
+        """
         url = self.get_video_query(topic,  orientation)[0]["video_files"][0]["link"]
         # Parsing dell'URL per ottenere il dominio e il percorso
         parsed_url = urllib.parse.urlparse(url)
@@ -46,7 +50,7 @@ class Pexel:
         conn.close()
         return video_name
 
-    def get_video_query(self, topic,  orientation: ORIENTATION):
+    def get_video_query(self, topic,  orientation: Orientation):
         conn = http.client.HTTPSConnection("api.pexels.com")
         headers = {
             'Authorization': 'yL7ewVOVKa8nh1pR7koTTlntKO1IkNvWMoQRP4I0ANfFr0ev1F0mIAjo',
