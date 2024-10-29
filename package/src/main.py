@@ -1,10 +1,10 @@
 import logging
-import os
 
 from dotenv import load_dotenv
 
 from pexel import Orientation, Pexel
 from reddit import Reddit
+from sound import Sound
 from title import TitleGeneration
 from twitch import Twitch
 from video_editor import VideoEditor
@@ -24,28 +24,20 @@ def main():
 
     load_dotenv("/app/keys/.env")
 
+    sound = Sound()
+    print(sound.download_sound("", "sinister"))
+    
+    return
+    
+    pexel = Pexel();
+    pexel_video = pexel.get_video("rain", Orientation.PORTRAIT);
+    
     reddit = Reddit()
     reddit_image = reddit.get_image("TwoSentenceHorror")
     
-    pexel = Pexel();
-    pexel_video = pexel.get_video("happy", Orientation.PORTRAIT);
     
     video_editor = VideoEditor()
     final_video = video_editor.image_to_center(video=pexel_video, image=reddit_image)
-    
-    twitch = Twitch()
-    clips = twitch.download_clips_from_twitch(TOTAL_VIDEO_TIME)
-    video = video_editor.concat_fade(clips, transition_time=1)
-    video_editor.add_intro_to_video(
-        video, f'{os.environ.get("BASE_PATH")}/files/intro.mov')
-
-    youtube_api = Youtube()
-    youtube_api.upload(
-        video_file=os.environ.get("OUTPUT"),
-        title="Crack Highlight - League Of Legends #1",
-        description="Follow me!",
-        thumbnail_file=None)
-
 
 main()
 
