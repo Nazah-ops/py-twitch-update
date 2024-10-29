@@ -11,13 +11,13 @@ class Twitch:
     
     def __init__(self):
         payload = {
-            'client_id' : os.environ.get('CLIENT_ID'),
-            'client_secret': os.environ.get("CLIENT_SECRET"),
+            'client_id' : os.environ.get('TWITCH_CLIENT_ID'),
+            'client_secret': os.environ.get("TWITCH_CLIENT_SECRET"),
             'grant_type': 'client_credentials'
         }
         response = requests.post("https://id.twitch.tv/oauth2/token", headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=payload)
         token = json.loads(response.text)["access_token"]
-        self.headers = {'Authorization': f'Bearer {token}', 'Client-Id': os.environ.get("CLIENT_ID")}
+        self.headers = {'Authorization': f'Bearer {token}', 'Client-Id': os.environ.get("TWITCH_CLIENT_ID")}
 
     @staticmethod
     def get_streamers():
