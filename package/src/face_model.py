@@ -4,6 +4,8 @@ import numpy as np
 import face_recognition
 import os
 
+from utils.globals import work_dir
+
 class FaceModel:
 
     def __init__(self) -> None:
@@ -11,7 +13,7 @@ class FaceModel:
 
     def read_video_emotion(self, video: str) -> dict:
 
-        vidcap = cv2.VideoCapture(f'''{os.environ.get('BASE_PATH')}/files/clips/{video}''')
+        vidcap = cv2.VideoCapture(work_dir(video))
         success,image = vidcap.read()
         
         if success == False:

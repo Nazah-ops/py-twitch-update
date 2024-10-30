@@ -1,8 +1,11 @@
 FROM python:3.9-bullseye
 
-WORKDIR /app
+# Imposta la variabile d'ambiente
+ENV APP_WORKDIR=/app
 
-COPY ./package /app
+WORKDIR ${APP_WORKDIR}
+
+COPY ./package ${APP_WORKDIR}
 
 COPY ./deploy/requirements.dev.txt requirements.dev.txt
 

@@ -1,8 +1,10 @@
 import http.client
 import json
-import uuid
+import logging
+from uuid import uuid4
 from enum import Enum
 from utils.download import download
+from utils.globals import work_dir
 
 class Orientation(Enum):
     LANDSCAPE = "landscape"
@@ -18,10 +20,13 @@ class Pexel:
         """ 
             Downloads a video from pexel given the topic, then returns the name of the video
         """
+        logging.info(f"Handling download background video: ", topic, orientation)
         url = self.get_video_query(topic,  orientation)[0]["video_files"][0]["link"]
-        video_name = f"/app/files/{uuid.uuid4().hex[:6].upper()}.mp4"
+        video_name = work_dir(f"{uuid4()}.mp4")
         download(url, video_name)
+        logging.info(f"Downloaded background video: ", video_name)
         return video_name
+    
     def get_video_query(self, topic,  orientation: Orientation):
         conn = http.client.HTTPSConnection("api.pexels.com")
         headers = {
