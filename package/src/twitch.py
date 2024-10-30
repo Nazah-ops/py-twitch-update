@@ -6,6 +6,8 @@ from os.path import dirname, join
 import requests
 from bs4 import BeautifulSoup
 
+from utils.globals import work_dir
+
 
 class Twitch:
     
@@ -64,7 +66,7 @@ class Twitch:
 
     def download_clip(self,clip):
         file = ''.join(filter(str.isalpha, f'{clip["title"]}')) + ".mp4"
-        path = "/app/files/clips/" + file;
+        path = work_dir(file);
 
         index = clip["thumbnail_url"].find('-preview')
         clip_url = clip["thumbnail_url"][:index] + '.mp4'
@@ -72,9 +74,6 @@ class Twitch:
 
         if r.headers['Content-Type'] != 'binary/octet-stream':
             raise Exception(f'Failed to download clip from thumb: {clip["thumbnail_url"]}')
-
-
-        if not os.path.exists('files/clips'): os.makedirs('files/clips')
 
         with open(path, 'wb') as f:
             f.write(r.content)
@@ -92,7 +91,7 @@ class Twitch:
         duration = get_length(path)
 
         #Slice video from last 3 seconds
-        slicedPath = f'/app/files/clips/sliced{file}'
+        slicedPath = work_dir(f'sliced{file}')
 
         from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
         startTime = (round(duration/100) * 20) #Cut the first 20 percent of the video

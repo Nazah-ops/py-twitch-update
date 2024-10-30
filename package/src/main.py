@@ -25,10 +25,8 @@ def main():
     load_dotenv("/app/keys/.env")
 
     sound = Sound()
-    print(sound.download_sound("", "sinister"))
-    
-    return
-    
+    soundeffect = sound.download_sound("", "sinister")
+
     pexel = Pexel();
     pexel_video = pexel.get_video("rain", Orientation.PORTRAIT);
     
@@ -37,8 +35,9 @@ def main():
     
     
     video_editor = VideoEditor()
-    final_video = video_editor.image_to_center(video=pexel_video, image=reddit_image)
-
+    video_with_image = video_editor.image_to_center(video=pexel_video, image=reddit_image)
+    final_video = video_editor.merge_audio_with_video(video_with_image, soundeffect)
+    print("Final result: ", final_video)
 main()
 
 # NOTE TO SELF
