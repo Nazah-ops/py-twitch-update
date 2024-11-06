@@ -20,11 +20,21 @@ class Pexel:
         """ 
             Downloads a video from pexel given the topic, then returns the name of the video
         """
-        logging.info(f"Handling download background video: ", topic, orientation)
-        url = self.get_video_query(topic,  orientation)[0]["video_files"][0]["link"]
+        logging.info(f"Handling download background video: {topic} {orientation}")
+        videos = self.get_video_query(topic,  orientation)
+        # Supponiamo che 'videos' sia una lista di dizionari come nel tuo esempio
+        filtered_videos = filter(
+            lambda video: video["height"] >= 1920 and any(
+                video_file["height"] >= 1920 for video_file in video["video_files"]
+            ),
+            videos
+        )
+
+        # Estrai gli URL dei video che soddisfano i criteri
+        url = [video_file["link"] for video in filtered_videos for video_file in video["video_files"] if video_file["height"] >= 1920][0]
         video_name = work_dir(f"{uuid4()}.mp4")
         download(url, video_name)
-        logging.info(f"Downloaded background video: ", video_name)
+        logging.info(f"Downloaded background video: {video_name}")
         return video_name
     
     def get_video_query(self, topic,  orientation: Orientation):
@@ -34,5 +44,6 @@ class Pexel:
         }
         conn.request("GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation.value}", {}, headers)
         data = conn.getresponse().read().decode("utf-8")
+        print(json.loads(data))
         return json.loads(data)["videos"]
                         
