@@ -1,5 +1,5 @@
 import os
-import uuid
+import glob
 
 from dotenv import load_dotenv
 
@@ -10,3 +10,9 @@ def work_dir(file: str = None):
     if file is None:
         raise Exception("No file given")
     return f'{app_workdir}/files/temp/{file}' 
+
+def clean_work_dir():
+
+    files = glob.glob(work_dir("*"))
+    for f in files:
+        os.remove(f)

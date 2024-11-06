@@ -39,7 +39,7 @@ class VideoEditor:
         PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
         videoFile = VideoFileClip(video)
 
-        image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=500)
+        image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=videoFile.h / 2)
 
         target_dir = work_dir(f"{uuid4()}.mp4")
         videoclip_with_image = CompositeVideoClip([videoFile, image])

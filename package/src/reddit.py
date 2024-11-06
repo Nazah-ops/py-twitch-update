@@ -84,10 +84,10 @@ class Reddit:
         driver.quit()
         
     def get_image(self, subreddit):
-        logging.info(f"Handling scraping reddit post: ", subreddit)
+        logging.info(f"Handling scraping reddit post: {subreddit}")
         posts = self.get_post_lists(subreddit, Trend.TOP)
         target_dir = work_dir(f"{uuid4()}.png")
         self.get_screenshot_of_post(posts[0]["data"], target_dir)
-        logging.info(f"Scraped reddit post: ", target_dir)
+        logging.info("Scraped reddit post: %s", target_dir)
         return target_dir
         
