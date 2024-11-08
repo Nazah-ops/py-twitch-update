@@ -2,12 +2,12 @@ import logging
 import ssl
 
 from dotenv import load_dotenv
-
 from pexel import Orientation, Pexel
 from reddit import Reddit
 from sound import Sound
 from title import TitleGeneration
-from utils.globals import clean_dir
+from twitch import Twitch
+from utils.globals import clean_dir, clean_work_dir
 from video_editor import VideoEditor
 
 """ from youtube import Youtube """
@@ -25,21 +25,22 @@ def main():
     clean_dir()
     load_dotenv("/app/keys/.env")
 
+    clean_work_dir()
+
     sound = Sound()
     soundeffect = sound.download_sound("", "sinister")
 
     pexel = Pexel()
     pexel_video = pexel.get_video("dark", Orientation.PORTRAIT)
-
     reddit = Reddit()
     reddit_image = reddit.get_image("TwoSentenceHorror")
 
     video_editor = VideoEditor()
     video_with_image = video_editor.image_to_center(
         video=pexel_video, image=reddit_image)
-
     final_video = video_editor.merge_audio_with_video(
         video_with_image, soundeffect)
+
     print("Final result: ", final_video)
 
 

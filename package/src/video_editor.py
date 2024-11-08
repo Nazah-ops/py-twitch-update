@@ -38,7 +38,12 @@ class VideoEditor:
     def image_to_center(self, video, image):
         PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
         videoFile = VideoFileClip(video)
+<<<<<<< HEAD
         image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=videoFile.h * .26)
+=======
+
+        image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=videoFile.h / 2)
+>>>>>>> 3b74dae6a22892a7d127384de2ebead9c54096b9
 
         target_dir = work_dir(f"{uuid4()}.mp4")
         videoclip_with_image = CompositeVideoClip([videoFile, image])
