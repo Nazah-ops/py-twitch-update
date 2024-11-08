@@ -1,8 +1,8 @@
 import json
 import logging
-from uuid import uuid4
 from enum import Enum
 from io import BytesIO
+from uuid import uuid4
 
 from PIL import Image
 from requests import get
@@ -34,7 +34,7 @@ class Reddit:
         response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
         data = json.loads(response.text)
         return data["data"]["children"]
-
+    
     def get_screenshot_of_post(self, post_data, image_name):
         zoom = 3
         options = Options()
@@ -85,6 +85,7 @@ class Reddit:
         
     def get_image(self, subreddit):
         logging.info(f"Handling scraping reddit post: ", subreddit)
+        
         posts = self.get_post_lists(subreddit, Trend.TOP)
         target_dir = work_dir(f"{uuid4()}.png")
         self.get_screenshot_of_post(posts[0]["data"], target_dir)
