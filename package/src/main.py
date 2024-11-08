@@ -20,7 +20,7 @@ logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def main():
+def clean_work_dir():
     logging.info('Inizio processo di scraping e upload.')
     clean_dir()
     load_dotenv("/app/keys/.env")
