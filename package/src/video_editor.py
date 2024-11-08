@@ -38,8 +38,7 @@ class VideoEditor:
     def image_to_center(self, video, image):
         PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
         videoFile = VideoFileClip(video)
-
-        image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=500)
+        image = ImageClip(image).set_start(0).set_duration(videoFile.duration).set_pos(("center","center")).resize(height=videoFile.h * .26)
 
         target_dir = work_dir(f"{uuid4()}.mp4")
         videoclip_with_image = CompositeVideoClip([videoFile, image])
@@ -54,7 +53,8 @@ class VideoEditor:
         new_clip = videoclip.without_audio()
         new_clip.write_videofile(videoclip_without_audio)
         
-        target_dir = work_dir(f"{uuid4()}.mp4")
+        """ target_dir = work_dir(f"{uuid4()}.mp4") """
+        target_dir = work_dir("culo.mp4")
         
         #Aggiungi l'audio nuovo
         output_videoclip = VideoFileClip(videoclip_without_audio)

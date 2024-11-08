@@ -1,10 +1,15 @@
+import json
 import logging
 import os
 from uuid import uuid4
-import json
-from utils.download import download
+
 from requests import get
+
+from utils.download import download
 from utils.globals import work_dir
+from utils.mongo import get_unused_id
+
+
 class Sound:
     def __init__(self):
         pass
@@ -19,13 +24,12 @@ class Sound:
         }
         
         response = get(url, params=params)
-        return json.loads(response.text)
-        
+        return json.loads(response.text)["results"]
         
     def download_sound(self, query, tag):
         logging.info(f"Handling download of audio effect, query:{query}, tag:{tag}")
-        query_list = self.get_sound_list(query, tag)
-        url = f'https://freesound.org/apiv2/sounds/{query_list["results"][0]["id"]}/'
+        id = get_unused_id({"source" : "pexel", "query": query, "tag": tag}, list(map(lambda x: x['id'], self.get_sound_list(query, tag))))
+        url = f'https://freesound.org/apiv2/sounds/{id}/'
         params = {
             "token": os.environ.get("FREESOUND_API_KEY"),
         }
