@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from enum import Enum
 from io import BytesIO
 from uuid import uuid4
@@ -9,7 +10,9 @@ from requests import get
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+
 from utils.globals import work_dir
+from utils.mongo import get_unused_id
 
 
 class Trend(Enum):
@@ -31,10 +34,18 @@ class Reddit:
             """, element)
 
     def get_post_lists(self, subreddit, trend: Trend):
-        response = get(
-            f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
-        data = json.loads(response.text)
-        return data["data"]["children"]
+        while True:
+            try:
+                response = get(
+                    f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
+                if not response.ok:
+                    raise Exception("Reddit resopnse not ok: ", response.content)
+                data = json.loads(response.text)
+                return data["data"]["children"]
+            except Exception as e:
+                print(f"Errore: {e}. Riprovo tra 10 secondi...")
+                time.sleep(10)
+
 
     def get_screenshot_of_post(self, post_data, image_name):
         zoom = 3
@@ -87,10 +98,14 @@ class Reddit:
         im.save(image_name)
         driver.quit()
 
-    def get_image(self, subreddit):
+    def get_image(self, subreddit, trend: Trend):
         logging.info(f"Handling scraping reddit post: {subreddit}")
-        posts = self.get_post_lists(subreddit, Trend.TOP)
+        
+        posts = self.get_post_lists(subreddit, trend)
         target_dir = work_dir(f"{uuid4()}.png")
-        self.get_screenshot_of_post(posts[0]["data"], target_dir)
+        
+        post = get_unused_id({"source" : "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+        
+        self.get_screenshot_of_post(post["data"], target_dir)
         logging.info("Scraped reddit post: %s", target_dir)
-        return target_dir
+        return target_dir, post["data"]["title"]

@@ -2,13 +2,17 @@ import logging
 import ssl
 
 from dotenv import load_dotenv
-from pexel import Orientation, Pexel
-from reddit import Reddit
-from sound import Sound
+
+from integrations.pexel import Orientation, Pexel
+from integrations.reddit import Reddit, Trend
+from integrations.sound import Sound
+from integrations.twitch import Twitch
 from title import TitleGeneration
-from twitch import Twitch
-from utils.globals import clean_dir, clean_work_dir
+from utils.format import make_reel
+from utils.globals import clean_work_dir
+from utils.mongo import close_mongo_client
 from video_editor import VideoEditor
+from youtube import upload
 
 """ from youtube import Youtube """
 
@@ -20,29 +24,16 @@ logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def clean_work_dir():
+def main():
     logging.info('Inizio processo di scraping e upload.')
-    clean_dir()
     load_dotenv("/app/keys/.env")
 
     clean_work_dir()
-
-    sound = Sound()
-    soundeffect = sound.download_sound("", "sinister")
-
-    pexel = Pexel()
-    pexel_video = pexel.get_video("dark", Orientation.PORTRAIT)
-    reddit = Reddit()
-    reddit_image = reddit.get_image("TwoSentenceHorror")
-
-    video_editor = VideoEditor()
-    video_with_image = video_editor.image_to_center(
-        video=pexel_video, image=reddit_image)
-    final_video = video_editor.merge_audio_with_video(
-        video_with_image, soundeffect)
-
-    print("Final result: ", final_video)
-
+    video, title = make_reel()
+    upload(video, title)
+    logging.info(f"Video produced: {video}")
+    
+    close_mongo_client()
 
 main()
 

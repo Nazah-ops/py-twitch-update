@@ -1,8 +1,13 @@
 import os
 from uuid import uuid4
 
+import numpy as np
 import PIL
 from moviepy.editor import *
+from moviepy.editor import VideoFileClip
+from moviepy.video.fx.all import lum_contrast
+from moviepy.video.tools.drawing import color_split
+
 from utils.globals import work_dir
 
 
@@ -57,8 +62,7 @@ class VideoEditor:
         new_clip = videoclip.without_audio()
         new_clip.write_videofile(videoclip_without_audio)
 
-        """ target_dir = work_dir(f"{uuid4()}.mp4") """
-        target_dir = work_dir("culo.mp4")
+        target_dir = work_dir(f"{uuid4()}.mp4")
 
         # Aggiungi l'audio nuovo
         output_videoclip = VideoFileClip(videoclip_without_audio)
@@ -68,3 +72,27 @@ class VideoEditor:
         output_videoclip.audio = new_audioclip
         output_videoclip.write_videofile(target_dir)
         return target_dir
+
+
+    def vhs_effect(self, clip):
+        # Aggiunge un effetto di rumore
+        noise = (np.random.normal(size=(clip.h, clip.w, 3)) * 20).astype('uint8')
+        noise_clip = clip.fl_image(lambda frame: np.clip(frame + noise, 0, 255).astype('uint8'))
+        
+        # Luminosità e contrasto per dare il look da VHS
+        contrast_clip = lum_contrast(noise_clip, lum=60, contrast=80)
+
+        # Separazione RGB manuale per creare un effetto di offset
+        def rgb_split(image):
+            # Separazione dei canali
+            r = np.roll(image[:, :, 0], 1, axis=1)
+            g = np.roll(image[:, :, 1], -1, axis=0)
+            b = image[:, :, 2]
+            # Ricombinazione dei canali con piccoli offset
+            return np.stack([r, g, b], axis=2)
+        
+        # Applica l'offset RGB a ogni frame
+        rgb_clip = contrast_clip.fl_image(rgb_split)
+        
+        return rgb_clip
+

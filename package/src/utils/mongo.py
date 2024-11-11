@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from pymongo import MongoClient
 
@@ -25,17 +26,32 @@ def close_mongo_client():
     global client
     client.close();
     
-def get_unused_id(query: dict, ids: list[str]):
-    global client
+def get_unused_id(query: dict, objects: list[dict], id_key: str):
     client = get_mongo_client()["db"]["scraper"]
-    for id in ids:
-        isUsedSound = client.count_documents({ "source" : query["source"], "idResult": id })
-        if isUsedSound:
+    now = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    for object in objects:
+        object_id = find_key_in_dict(object, id_key)
+        is_used = client.count_documents({ "source" : query["source"], "idResult": object_id })
+        if is_used:
             continue
-        client.insert_one({ **query, "idResult":id })
-        return id
+        client.insert_one({ **query, "idResult":object_id, "createdAt": now })
+        return object
     
-    """ All the sounds were used """
+    """ All the elements were used """
+    logging.info("All the sources were used, resetting..")
+    object_id = find_key_in_dict(objects[0], id_key)
     client.delete_many(query)
-    client.insert_one({ **query, "idResult": ids[0] })
-    return ids[0]
+    client.insert_one({ **query, "idResult": object_id, "createdAt": now })
+    return objects[0]
+
+def find_key_in_dict(json, nome_chiave):
+# Se la chiave è presente al livello corrente, restituisci il valore
+    if nome_chiave in json:
+        return json[nome_chiave]
+    # Altrimenti, cerca nelle sottostrutture se sono dizionari
+    for chiave, valore in json.items():
+        if isinstance(valore, dict):
+            risultato = find_key_in_dict(valore, nome_chiave)
+            if risultato is not None:
+                return risultato
+    return None

@@ -1,19 +1,32 @@
-FROM python:3.9
+FROM python:3.9-bullseye
 
-WORKDIR /app
+# Imposta la variabile d'ambiente
+ENV APP_WORKDIR=/app
 
-COPY ./package /app
+WORKDIR ${APP_WORKDIR}
 
-COPY ./deploy/requirements.prod.txt requirements.prod.txt
+COPY ./package ${APP_WORKDIR}
 
-RUN apt update &&\
-    apt install ffmpeg -y &&\
-    apt-get install build-essential -y &&\
-    apt-get install -y wget bzip2 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev &&\
-    rm -rf /var/lib/apt/lists/*
+COPY ./deploy/requirements.dev.txt requirements.dev.txt
 
-RUN pip install cmake
 
-RUN pip install -r requirements.prod.txt
+RUN echo '\
+    Acquire::Retries "100";\
+    Acquire::https::Timeout "240";\
+    Acquire::http::Timeout "240";\
+    APT::Get::Assume-Yes "true";\
+    APT::Install-Recommends "false";\
+    APT::Install-Suggests "false";\
+    Debug::Acquire::https "true";\
+    ' > /etc/apt/apt.conf.d/99custom
+
+RUN apt update \
+    && apt-get install ffmpeg -y  \
+    && apt-get install -y --no-install-recommends ca-certificates curl firefox-esr           \
+    && rm -fr /var/lib/apt/lists/*                \
+    && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz | tar xz -C /usr/local/bin \
+    && apt-get purge -y ca-certificates curl
+
+RUN pip install -r requirements.dev.txt
 
 CMD /usr/local/bin/python /app/package/src/main.py
