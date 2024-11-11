@@ -124,7 +124,6 @@ class Twitch:
             try:
                 clips_time, downloaded_clips_paths = self.get_clips_from_streamer(
                     streamer_name)
-                print(clips_time)
                 total_time += clips_time
                 paths.append(downloaded_clips_paths)
             finally:

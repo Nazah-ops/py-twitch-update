@@ -2,13 +2,8 @@ requests
 python-dotenv
 moviepy
 notebook
-google-auth 
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client 
 selenium
-#face-recognition
-#webdriver-manager
-#keras
-#tensorflow
-#opencv-python
+google-api-python-client
+google-auth-oauthlib 
+google-auth-httplib2
+oauth2client
