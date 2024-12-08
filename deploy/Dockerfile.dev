@@ -9,7 +9,7 @@ COPY ./package ${APP_WORKDIR}
 
 COPY ./deploy/requirements.dev.txt requirements.dev.txt
 
-
+#Handling error with sudo packages
 RUN echo '\
     Acquire::Retries "100";\
     Acquire::https::Timeout "240";\
@@ -22,13 +22,12 @@ RUN echo '\
 
 RUN apt update \
     && apt-get install ffmpeg -y  \
-    && apt-get install -y --no-install-recommends ca-certificates curl firefox-esr           \
+    && apt-get install -y --no-install-recommends ca-certificates curl firefox-esr \
     && rm -fr /var/lib/apt/lists/*                \
     && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz | tar xz -C /usr/local/bin \
-    && apt-get purge -y ca-certificates curl
+    && apt-get purge -y ca-certificates curl 
 
 RUN pip install -r requirements.dev.txt
-
 
 EXPOSE 8000
 

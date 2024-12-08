@@ -26,7 +26,14 @@ def close_mongo_client():
     global client
     client.close();
     
-def get_unused_id(query: dict, objects: list[dict], id_key: str):
+
+def get_unused_id_dict(query: dict, objects: list[dict], id_key: str):
+    """
+        Esegue una chiamata al backend, per controllare se quali id trovati con la query fornita sia gia' stato utilizzato, restituendo un id inutilizzato.
+        Se tutti gli id forniti dovessero essere gia' stati utilizzati, allora pulisce tutti gli id a backend, per poi continuare il ciclo.
+        Questa funzione permette di utilizzare tutti gli id costantemente senza sovrapporli
+        Parametri: query: con cui si trovano gli id, objects: gli id trovati, 
+    """
     client = get_mongo_client()["db"]["scraper"]
     now = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
     for object in objects:
@@ -45,7 +52,7 @@ def get_unused_id(query: dict, objects: list[dict], id_key: str):
     return objects[0]
 
 def find_key_in_dict(json, nome_chiave):
-# Se la chiave è presente al livello corrente, restituisci il valore
+    # Se la chiave è presente al livello corrente, restituisci il valore
     if nome_chiave in json:
         return json[nome_chiave]
     # Altrimenti, cerca nelle sottostrutture se sono dizionari

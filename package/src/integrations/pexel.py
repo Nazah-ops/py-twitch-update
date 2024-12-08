@@ -9,7 +9,7 @@ from moviepy.editor import VideoFileClip
 
 from utils.download import download
 from utils.globals import work_dir
-from utils.mongo import get_unused_id
+from utils.mongo import get_unused_id_dict
 
 
 class Orientation(Enum):
@@ -28,7 +28,7 @@ class Pexel:
         """
         logging.info(f"Handling download background video: {topic} {orientation}")
         video_list = [video for video in self.get_video_query(topic,  orientation) if video['height'] >= 1920]
-        video_source = get_unused_id({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,'url')['video_files']
+        video_source = get_unused_id_dict({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,'url')['video_files']
         url = max(video_source, key=lambda x: x['size'])['link']
         
         video_name = work_dir(f"{uuid4()}.mp4")

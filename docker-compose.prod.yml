@@ -1,14 +1,11 @@
 services:
   api:
-    build:
+    build: 
       context: .
       dockerfile: ./deploy/Dockerfile.prod
-    container_name: py-twitch-prod
+    container_name: scraper-process-prod
     volumes:
       - ./package:/app
-      - /app/files/clips
-      - /app/src/notebooks
-      - /app/src/__pycache__
-      - /app/src/.ipynb_checkpoints
+      - /app/files
     environment:
       - ENV=PROD

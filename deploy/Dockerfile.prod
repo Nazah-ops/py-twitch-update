@@ -29,4 +29,4 @@ RUN apt update \
 
 RUN pip install -r requirements.dev.txt
 
-CMD /usr/local/bin/python /app/package/src/main.py
+CMD ["/usr/local/bin/python", "/app/src/main.py"]
