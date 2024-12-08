@@ -7,7 +7,7 @@ from requests import get
 
 from utils.download import download
 from utils.globals import work_dir
-from utils.mongo import get_unused_id
+from utils.mongo import get_unused_id_dict
 
 
 class Sound:
@@ -28,7 +28,7 @@ class Sound:
         
     def download_sound(self, query, tag):
         logging.info(f"Handling download of audio effect, query:{query}, tag:{tag}")
-        id = get_unused_id({"source" : "freesound.org", "query": query, "tag": tag}, self.get_sound_list(query, tag), 'id')["id"]
+        id = get_unused_id_dict({"source" : "freesound.org", "query": query, "tag": tag}, self.get_sound_list(query, tag), 'id')["id"]
         url = f'https://freesound.org/apiv2/sounds/{id}/'
         params = {
             "token": os.environ.get("FREESOUND_API_KEY"),

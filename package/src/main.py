@@ -4,7 +4,7 @@ import ssl
 from dotenv import load_dotenv
 
 from integrations.pexel import Orientation, Pexel
-from integrations.reddit import Reddit, Trend
+from integrations.reddit import RedditClient, Trend
 from integrations.sound import Sound
 from integrations.twitch import Twitch
 from title import TitleGeneration
@@ -15,8 +15,6 @@ from video_editor import VideoEditor
 from youtube import upload
 
 """ from youtube import Youtube """
-
-TOTAL_VIDEO_TIME = 1 * 60
 
 logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -31,9 +29,11 @@ def main():
     clean_work_dir()
     video, title = make_reel()
     upload(video, title)
+
     logging.info(f"Video produced: {video}")
-    
+
     close_mongo_client()
+
 
 main()
 

@@ -4,18 +4,19 @@ from moviepy.editor import VideoFileClip
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
 from integrations.pexel import Orientation, Pexel
-from integrations.reddit import Reddit, Trend
+from integrations.reddit import RedditClient, Trend
 from integrations.sound import Sound
+from integrations.spotify import SpotifyClientHandler
 from utils.globals import work_dir
 from video_editor import VideoEditor
 
 
 def make_reel():
-    reddit = Reddit()
+    reddit = RedditClient()
     reddit_image, title = reddit.get_image("TwoSentenceHorror", trend=Trend.TOP)
     
-    sound = Sound()
-    soundeffect = sound.download_sound("", "sinister")
+    spotyHandler = SpotifyClientHandler()
+    soundeffect = spotyHandler.get_song_for_reel()
 
     background = get_background_video()
     
@@ -24,18 +25,8 @@ def make_reel():
 def get_background_video():
     pexel = Pexel()
     pexel_video = pexel.get_video("dark", Orientation.PORTRAIT)
-    editor = VideoEditor()
     
-    edited = work_dir(f"{uuid4()}.mp4")
-    
-    # Carica il video
-    clip = VideoFileClip(pexel_video)
-    # Applica l'effetto VHS
-    vhs_clip = editor.vhs_effect(clip)
-    # Salva il risultato
-    vhs_clip.write_videofile(edited)
-    
-    return edited
+    return pexel_video
 
 def compose(image, background_video, sound):
     
@@ -47,7 +38,6 @@ def compose(image, background_video, sound):
     final_video = editor.merge_audio_with_video(
         video_with_image, sound)
 
-
-    ffmpeg_extract_subclip(final_video, 0, 10, targetname=result)
+    ffmpeg_extract_subclip(final_video, 0, 15, targetname=result)
 
     return result

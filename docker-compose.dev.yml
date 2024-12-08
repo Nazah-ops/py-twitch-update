@@ -3,10 +3,10 @@ services:
     build: 
       context: .
       dockerfile: ./deploy/Dockerfile.dev
-    container_name: scraper-process
+    container_name: scraper-process-dev
     volumes:
       - ./package:/app
-      - /app/files/clips
+      - /app/files
     ports:
       - "8000:8000"
     environment:
