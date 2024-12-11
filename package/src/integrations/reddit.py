@@ -7,20 +7,27 @@ from io import BytesIO
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
-from dacite import from_dict
 from PIL import Image
 from requests import get
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.common.action_chains import ActionChains
 
 from utils.globals import work_dir
 from utils.mongo import get_unused_id_dict
 
-
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+from selenium.webdriver.common.action_chains import ActionChains
 @dataclass
 class MediaEmbed:
     content: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class Data:
@@ -127,10 +134,12 @@ class Data:
     media: Optional[Any]
     is_video: bool
 
+
 @dataclass
 class RedditPost:
     kind: str
     data: Data
+
 
 class Trend(Enum):
     RISING = "rising"
@@ -138,90 +147,146 @@ class Trend(Enum):
     TOP = "top"
     HOT = "hot"
 
+"""
+    Alcuini elementi della pagina di reddit sono isolati in tags chiamati "Shadow Root"
+    Essi permettono di isolare delle sezioni html, rendendo difficile fare scraping, in quanto
+    a codice, sembra che siano pagine diverse, accessibili solo dal tag host
+    
+    Questo codice javascript permette di iterare su tutti i shadow root, e cliccare il primo elemento
+    del selettore css fornito
+"""
+CLICK_SHADOW_ELEMENT_SCRIPT = """
+            function querySelectorAllShadows(selector, el = document.body) {
+              // recurse on childShadows
+              const childShadows = Array.from(el.querySelectorAll('*')).map(el => el.shadowRoot).filter(Boolean);
+              const childResults = childShadows.map(child => querySelectorAllShadows(selector, child));
+              
+              const result = Array.from(el.querySelectorAll(selector));
+              return result.concat(childResults).flat();
+            }
+            querySelectorAllShadows(arguments[0])[0].click()
+        """
 
-class RedditClient:
-    def __init__(self):
-        pass
+def login(driver, username, password):
+    try:
+        # Naviga alla pagina di login
+        driver.get("https://www.reddit.com/login/")
 
-    def remove_element(self, driver, by: By, path):
-        element = driver.find_element(by, path)
-        driver.execute_script("""
-            var element = arguments[0];
-            element.parentNode.removeChild(element);
-            """, element)
+        # Trova e inserisci l'username
+        username_field = WebDriverWait(driver, 3).until(
+            EC.presence_of_element_located((By.ID, "login-username"))
+        )
+        username_field.send_keys(username)
 
-    def get_post_lists(self, subreddit, trend: Trend) -> list[RedditPost]:
-        while True:
-            try:
-                response = get(
-                    f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
-                if not response.ok:
-                    raise Exception("Reddit response not ok: ", response.content)
-                data = json.loads(response.text)
-                return data["data"]["children"]
-            except Exception as e:
-                print(f"Errore: {e}. Riprovo tra 10 secondi...")
-                time.sleep(10)
+        # Trova e inserisci la password
+        password_field = driver.find_element(By.ID, "login-password")
+        password_field.send_keys(password)
 
-
-    def get_screenshot_of_post(self, post_data, image_name):
-        zoom = 3
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--width=6000")  # Set the desired width
-        options.add_argument("--height=5000")  # Set the desired height
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        driver = webdriver.Firefox(options=options)
-
-        driver.get(post_data["url"])
-
-        # Change theme to dark
-        html = driver.find_element(By.XPATH, "/html")
-        driver.execute_script("arguments[0].className = 'theme-dark';", html)
-        driver.execute_script(
-            "arguments[0].classList.remove('theme-light');", html)
-        driver.implicitly_wait(5)
-
-        # Remove back button
-        self.remove_element(
-            driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
-        # Remove datestamp
-        self.remove_element(
-            driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
-
-        driver.execute_script(
-            f"document.body.style.zoom = '{zoom * 100}%'")     # ZOOM
-
-        # Crop to get the post only
-        post_container = driver.find_element(By.CSS_SELECTOR, "#main-content")
-        # Wrap words
-        driver.execute_script("""
-            var element = arguments[0];
-            element.style.width = '8vw';
-        """, post_container)
-
-        post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
-        # Make screenshot
-        screenshot = driver.get_screenshot_as_png()
-        # Ricarica la posizione dell'elemento
-        left = post.location['x']
-        top = post.location['y']
-        right = (post.location['x'] + post.size['width'])
-        bottom = (post.location['y'] + post.size['height'])
-
-        # Crop the image
-        im = Image.open(BytesIO(screenshot))
-        im = im.crop((left, top, right, bottom))
-        im.save(image_name)
-        driver.quit()
-
-    def get_image(self, subreddit, trend: Trend):
-        logging.info(f"Handling scraping reddit post: {subreddit}")
+        time.sleep(5)
         
-        posts: list[RedditPost] = self.get_post_lists(subreddit, trend)
-        target_dir = work_dir(f"{uuid4()}.png")
-        post: RedditPost = get_unused_id_dict({"source" : "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+        driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT, ".login")
         
-        self.get_screenshot_of_post(post["data"], target_dir)
-        logging.info("Scraped reddit post: %s", target_dir)
-        return target_dir, post["data"]["title"]
+        # Aspetta un momento per verificare il login
+        time.sleep(5)
+
+        # Controlla se l'utente è stato loggato con successo
+        if "login" not in driver.current_url.lower():
+            print("Login eseguito con successo!")
+        else:
+            print("Errore durante il login. Verifica username e password.")
+    except Exception as e:
+        print(f"Errore durante il processo di login: {e}")
+
+def remove_element(driver, by: By, path):
+    element = driver.find_element(by, path)
+    driver.execute_script("""
+        var element = arguments[0];
+        element.parentNode.removeChild(element);
+        """, element)
+
+
+def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
+    while True:
+        try:
+            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
+            if not response.ok: raise Exception("Reddit response not ok: ",response.content)
+            
+            data = json.loads(response.text)
+            return data["data"]["children"]
+        except Exception as e:
+            print(f"Errore: {e}. Riprovo tra 10 secondi...")
+            time.sleep(10)
+
+def get_screenshot_of_post(post_data, image_name):
+    zoom = 3
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--width=6000")  # Set the desired width
+    options.add_argument("--height=5000")  # Set the desired height
+    options.add_argument("--disable-gpu")  # Disabilita GPU (utile per vecchi sistemi)
+    options.add_argument("--no-sandbox")  # Per sistemi senza ambiente grafico
+    options.add_argument("--disable-dev-shm-usage")  # Riduce il consumo di memoria condivisa
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    # Specifica il percorso di GeckoDriver tramite la classe Service
+    service = Service("/usr/local/bin/geckodriver")
+    driver = webdriver.Firefox(service=service, options=options)
+    
+    login(driver, "preludiodark@gmail.com", "gomma123")
+    
+    #Access main page
+    driver.get(post_data["url"])
+
+    # Change theme to dark
+    html = driver.find_element(By.XPATH, "/html")
+    driver.execute_script("arguments[0].className = 'theme-dark';", html)
+    driver.execute_script(
+        "arguments[0].classList.remove('theme-light');", html)
+    driver.implicitly_wait(5)
+
+    # Remove back button
+    remove_element(
+        driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/pdp-back-button")
+    # Remove datestamp
+    remove_element(
+        driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
+
+
+    #Clicca sul visualizza spoiler
+    driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT, ".button-small.items-center.button-media.justify-center.button.inline-flex ")
+
+    driver.execute_script(
+        f"document.body.style.zoom = '{zoom * 100}%'")     # ZOOM
+
+    # Crop to get the post only
+    post_container = driver.find_element(By.CSS_SELECTOR, "#main-content")
+    # Wrap words
+    driver.execute_script("""
+        var element = arguments[0];
+        element.style.width = '8vw';
+    """, post_container)
+
+    post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
+    # Make screenshot
+    screenshot = driver.get_screenshot_as_png()
+    # Ricarica la posizione dell'elemento
+    left = post.location['x']
+    top = post.location['y']
+    right = (post.location['x'] + post.size['width'])
+    bottom = (post.location['y'] + post.size['height'])
+
+    # Crop the image
+    im = Image.open(BytesIO(screenshot))
+    im = im.crop((left, top, right, bottom))
+    im.save(image_name)
+    driver.quit()
+
+def get_post(subreddit, trend: Trend):
+    logging.info(f"Handling scraping reddit post: {subreddit}")
+
+    posts: list[RedditPost] = get_post_lists(subreddit, trend)
+    target_dir = work_dir(f"{uuid4()}.png")
+    post: RedditPost = get_unused_id_dict({"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+
+    get_screenshot_of_post(post["data"], target_dir)
+    logging.info("Scraped reddit post: %s", target_dir)
+    return target_dir, post["data"]["title"]

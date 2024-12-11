@@ -1,17 +1,12 @@
 import logging
+import os
 import ssl
 
 from dotenv import load_dotenv
 
-from integrations.pexel import Orientation, Pexel
-from integrations.reddit import RedditClient, Trend
-from integrations.sound import Sound
-from integrations.twitch import Twitch
-from title import TitleGeneration
-from utils.format import make_reel
 from utils.globals import clean_work_dir
+from utils.make_reel import make_reel
 from utils.mongo import close_mongo_client
-from video_editor import VideoEditor
 from youtube import upload
 
 """ from youtube import Youtube """
@@ -28,12 +23,13 @@ def main():
 
     clean_work_dir()
     video, title = make_reel()
-    upload(video, title)
+    
+    if os.environ.get('ENV') == "PROD":
+        upload(video, title)
 
     logging.info(f"Video produced: {video}")
-
+ 
     close_mongo_client()
-
 
 main()
 

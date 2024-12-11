@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import librosa
 import numpy as np
-from dotenv import load_dotenv
 from pydub import AudioSegment
 from pymongo import MongoClient
 from spotdl.download.downloader import Downloader
