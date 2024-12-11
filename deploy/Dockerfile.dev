@@ -3,6 +3,8 @@ FROM python:3.9-bullseye
 # Imposta la variabile d'ambiente
 ENV APP_WORKDIR=/app
 
+ENV ENV=DEV
+
 WORKDIR ${APP_WORKDIR}
 
 COPY ./package ${APP_WORKDIR}
@@ -24,7 +26,15 @@ RUN apt update \
     && apt-get install ffmpeg -y  \
     && apt-get install -y --no-install-recommends ca-certificates curl firefox-esr \
     && rm -fr /var/lib/apt/lists/*                \
-    && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz | tar xz -C /usr/local/bin \
+    && ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+    URL=https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux64.tar.gz; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+    URL=https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux-aarch64.tar.gz; \
+    else \
+    echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi \
+    && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux-aarch64.tar.gz | tar xz -C /usr/local/bin \
     && apt-get purge -y ca-certificates curl 
 
 RUN pip install -r requirements.dev.txt
