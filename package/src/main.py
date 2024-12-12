@@ -1,4 +1,4 @@
-import logging
+import logging as logger
 import os
 import ssl
 
@@ -11,23 +11,23 @@ from youtube import upload
 
 """ from youtube import Youtube """
 
-logging.basicConfig(format="[%(asctime)s] - %(message)s", level=logging.INFO,
+logger.basicConfig(format="[%(asctime)s] - %(message)s", level=logger.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def main():
-    logging.info('Inizio processo di scraping e upload.')
+    logger.info('Inizio processo di scraping e upload.')
     load_dotenv("/app/keys/.env")
 
     clean_work_dir()
-    video, title = make_reel()
+    video, title, keywords = make_reel()
     
-    if os.environ.get('ENV') == "PROD":
-        upload(video, title)
+    #if os.environ.get('ENV') == "PROD":
+    upload(file=video, title=title, keywords=keywords)
 
-    logging.info(f"Video produced: {video}")
+    logger.info(f"Video produced: {title}")
  
     close_mongo_client()
 

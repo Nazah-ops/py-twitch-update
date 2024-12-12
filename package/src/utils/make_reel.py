@@ -1,3 +1,4 @@
+import logging as logger
 from uuid import uuid4
 
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
@@ -12,12 +13,14 @@ from video_editor import VideoEditor
 def make_reel():
     reddit_image, title = get_post("TwoSentenceHorror", trend=Trend.TOP)
     
+    logger.info("Video title: " + title)
+    
     spotyHandler = SpotifyClientHandler()
     soundeffect = spotyHandler.get_song_for_reel()
 
     background = get_background_video()
     
-    return compose(image=reddit_image, background_video=background, sound=soundeffect), title
+    return compose(image=reddit_image, background_video=background, sound=soundeffect), title, "horrorstoy,reddithorror,shorthorrorstory,reddit,horror,scarystories,horrorstories,redditstories,scary,twosentencehorror,twosentencestories"
 
 def get_background_video():
     pexel = Pexel()
