@@ -10,20 +10,17 @@ from uuid import uuid4
 from PIL import Image
 from requests import get
 from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from utils.globals import work_dir
 from utils.mongo import get_unused_id_dict
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
-from selenium.webdriver.common.action_chains import ActionChains
+
 @dataclass
 class MediaEmbed:
     content: Dict[str, Any] = field(default_factory=dict)
@@ -156,16 +153,19 @@ class Trend(Enum):
     del selettore css fornito
 """
 CLICK_SHADOW_ELEMENT_SCRIPT = """
-            function querySelectorAllShadows(selector, el = document.body) {
-              // recurse on childShadows
-              const childShadows = Array.from(el.querySelectorAll('*')).map(el => el.shadowRoot).filter(Boolean);
-              const childResults = childShadows.map(child => querySelectorAllShadows(selector, child));
-              
-              const result = Array.from(el.querySelectorAll(selector));
-              return result.concat(childResults).flat();
-            }
-            querySelectorAllShadows(arguments[0])[0].click()
-        """
+    function querySelectorAllShadows(selector, el = document.body) {
+        const childShadows = Array.from(el.querySelectorAll('*')).map(el => el.shadowRoot).filter(Boolean);
+        const childResults = childShadows.map(child => querySelectorAllShadows(selector, child));
+        const result = Array.from(el.querySelectorAll(selector));
+        return result.concat(childResults).flat();
+    }
+        try {
+        querySelectorAllShadows(arguments[0])[0].click();
+        return true
+    } catch (error) {
+        return false
+    }
+"""
 
 def login(driver, username, password):
     try:
@@ -187,7 +187,7 @@ def login(driver, username, password):
         driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT, ".login")
         
         # Aspetta un momento per verificare il login
-        time.sleep(5)
+        time.sleep(10)
 
         # Controlla se l'utente è stato loggato con successo
         if "login" not in driver.current_url.lower():
@@ -208,7 +208,7 @@ def remove_element(driver, by: By, path):
 def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
     while True:
         try:
-            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False)
+            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
             if not response.ok: raise Exception("Reddit response not ok: ",response.content)
             
             data = json.loads(response.text)
