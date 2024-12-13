@@ -16,7 +16,6 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-
 from utils.globals import work_dir
 from utils.mongo import get_unused_id_dict
 
@@ -144,11 +143,12 @@ class Trend(Enum):
     TOP = "top"
     HOT = "hot"
 
+
 """
     Alcuini elementi della pagina di reddit sono isolati in tags chiamati "Shadow Root"
     Essi permettono di isolare delle sezioni html, rendendo difficile fare scraping, in quanto
     a codice, sembra che siano pagine diverse, accessibili solo dal tag host
-    
+
     Questo codice javascript permette di iterare su tutti i shadow root, e cliccare il primo elemento
     del selettore css fornito
 """
@@ -167,6 +167,7 @@ CLICK_SHADOW_ELEMENT_SCRIPT = """
     }
 """
 
+
 def login(driver, username, password):
     try:
         # Naviga alla pagina di login
@@ -183,9 +184,9 @@ def login(driver, username, password):
         password_field.send_keys(password)
 
         time.sleep(5)
-        
+
         driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT, ".login")
-        
+
         # Aspetta un momento per verificare il login
         time.sleep(10)
 
@@ -196,6 +197,7 @@ def login(driver, username, password):
             print("Errore durante il login. Verifica username e password.")
     except Exception as e:
         print(f"Errore durante il processo di login: {e}")
+
 
 def remove_element(driver, by: By, path):
     element = driver.find_element(by, path)
@@ -208,14 +210,19 @@ def remove_element(driver, by: By, path):
 def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
     while True:
         try:
-            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
-            if not response.ok: raise Exception("Reddit response not ok: ",response.content)
-            
+
+            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers={
+                           'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
+            if not response.ok:
+                raise Exception(
+                    "Reddit response not ok: ", response.content)
+
             data = json.loads(response.text)
             return data["data"]["children"]
         except Exception as e:
             print(f"Errore: {e}. Riprovo tra 10 secondi...")
             time.sleep(10)
+
 
 def get_screenshot_of_post(post_data, image_name):
     zoom = 3
@@ -223,17 +230,19 @@ def get_screenshot_of_post(post_data, image_name):
     options.add_argument("--headless")
     options.add_argument("--width=6000")  # Set the desired width
     options.add_argument("--height=5000")  # Set the desired height
-    options.add_argument("--disable-gpu")  # Disabilita GPU (utile per vecchi sistemi)
+    # Disabilita GPU (utile per vecchi sistemi)
+    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")  # Per sistemi senza ambiente grafico
-    options.add_argument("--disable-dev-shm-usage")  # Riduce il consumo di memoria condivisa
+    # Riduce il consumo di memoria condivisa
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument('--disable-blink-features=AutomationControlled')
     # Specifica il percorso di GeckoDriver tramite la classe Service
     service = Service("/usr/local/bin/geckodriver")
     driver = webdriver.Firefox(service=service, options=options)
-    
+
     login(driver, "preludiodark@gmail.com", "gomma123")
-    
-    #Access main page
+
+    # Access main page
     driver.get(post_data["url"])
 
     # Change theme to dark
@@ -250,9 +259,9 @@ def get_screenshot_of_post(post_data, image_name):
     remove_element(
         driver, By.XPATH, "/html/body/shreddit-app/div[1]/div[1]/div/main/shreddit-post/div[1]/span[1]/div/span/faceplate-timeago/time")
 
-
-    #Clicca sul visualizza spoiler
-    driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT, ".button-small.items-center.button-media.justify-center.button.inline-flex ")
+    # Clicca sul visualizza spoiler
+    driver.execute_script(CLICK_SHADOW_ELEMENT_SCRIPT,
+                          ".button-small.items-center.button-media.justify-center.button.inline-flex ")
 
     driver.execute_script(
         f"document.body.style.zoom = '{zoom * 100}%'")     # ZOOM
@@ -261,9 +270,9 @@ def get_screenshot_of_post(post_data, image_name):
     post_container = driver.find_element(By.CSS_SELECTOR, "#main-content")
     # Wrap words
     driver.execute_script("""
-        var element = arguments[0];
-        element.style.width = '8vw';
-    """, post_container)
+            var element = arguments[0];
+            element.style.width = '8vw';
+        """, post_container)
 
     post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
     # Make screenshot
@@ -280,12 +289,14 @@ def get_screenshot_of_post(post_data, image_name):
     im.save(image_name)
     driver.quit()
 
+
 def get_post(subreddit, trend: Trend):
     logging.info(f"Handling scraping reddit post: {subreddit}")
 
     posts: list[RedditPost] = get_post_lists(subreddit, trend)
     target_dir = work_dir(f"{uuid4()}.png")
-    post: RedditPost = get_unused_id_dict({"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+    post: RedditPost = get_unused_id_dict(
+        {"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
 
     get_screenshot_of_post(post["data"], target_dir)
     logging.info("Scraped reddit post: %s", target_dir)
