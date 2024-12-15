@@ -1,9 +1,12 @@
+from dataclasses import dataclass, is_dataclass
 import http.client
 import json
 import logging
 from enum import Enum
+from typing import Any, List, Optional
 from uuid import uuid4
 
+from dacite import from_dict
 from moviepy import video
 from moviepy.editor import VideoFileClip
 
@@ -18,36 +21,75 @@ class Orientation(Enum):
     SQUARE = "square"
 
 
-class Pexel:
-    def __init__(self):
-        pass
+@dataclass
+class User:
+    id: int
+    name: str
+    url: str
 
-    def get_video(self, topic,  orientation: Orientation):
-        """ 
-            Downloads a video from pexel given the topic, then returns the name of the video
-        """
-        logging.info(f"Handling download background video: {topic} {orientation}")
-        video_list = [video for video in self.get_video_query(topic,  orientation) if video['height'] >= 1920]
-        video_source = get_unused_id_dict({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,'url')['video_files']
-        url = max(video_source, key=lambda x: x['size'])['link']
-        
-        video_name = work_dir(f"{uuid4()}.mp4")
-        download(url, video_name)
 
-        gray_name = work_dir(f"{uuid4()}.mp4")
-        clip = VideoFileClip(video_name)
-        gray_clip = video.fx.all.blackwhite(clip)
-        gray_clip.write_videofile(gray_name)
+@dataclass
+class VideoFile:
+    id: int
+    quality: str
+    file_type: str
+    width: int
+    height: int
+    fps: float
+    link: str
+    size: int
 
-        logging.info(f"Downloaded background video: {gray_name}")
-        return gray_name
 
-    def get_video_query(self, topic,  orientation: Orientation):
-        conn = http.client.HTTPSConnection("api.pexels.com")
-        headers = {
-            'Authorization': 'yL7ewVOVKa8nh1pR7koTTlntKO1IkNvWMoQRP4I0ANfFr0ev1F0mIAjo',
-        }
-        conn.request(
-            "GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation.value}", {}, headers)
-        data = conn.getresponse().read().decode("utf-8")
-        return json.loads(data)["videos"]
+@dataclass
+class VideoPicture:
+    id: int
+    nr: int
+    picture: str
+
+
+@dataclass
+class Video:
+    id: int
+    width: int
+    height: int
+    duration: int
+    full_res: Optional[str]
+    tags: List[str]
+    url: str
+    image: str
+    avg_color: Optional[str]
+    user: User
+    video_files: List[VideoFile]
+    video_pictures: List[VideoPicture]
+
+def get_video(topic,  orientation: Orientation):
+    """ 
+        Downloads a video from pexel given the topic, then returns the name of the video
+    """
+    logging.info(f"Handling download background video: {topic} {orientation}")
+    video_list: list[Video] = get_video_query(topic,  orientation)
+    video_source = get_unused_id_dict({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,'url')['video_files']
+    url = max(video_source, key=lambda x: x['size'])['link']
+    
+    video_name = work_dir(f"{uuid4()}.mp4")
+    download(url, video_name)
+
+    gray_name = work_dir(f"{uuid4()}.mp4")
+    clip = VideoFileClip(video_name)
+    gray_clip = video.fx.all.blackwhite(clip)
+    gray_clip.write_videofile(gray_name)
+
+    logging.info(f"Downloaded background video: {gray_name}")
+    return gray_name
+
+def get_video_query(topic: str,  orientation: Orientation) -> list[Video]:
+    conn = http.client.HTTPSConnection("api.pexels.com")
+    headers = {
+        'Authorization': 'yL7ewVOVKa8nh1pR7koTTlntKO1IkNvWMoQRP4I0ANfFr0ev1F0mIAjo',
+    }
+    conn.request(
+        "GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation.value}", {}, headers)
+    data = conn.getresponse().read().decode("utf-8")
+    videos = [from_dict(data_class=Video, data=video_dict) for video_dict in json.loads(data)["videos"]]
+    return [video for video in videos if video.height >= 1920]
+

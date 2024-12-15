@@ -2,7 +2,6 @@
 
 import os
 import random
-import sys
 import time
 
 import httplib2
@@ -158,7 +157,7 @@ def resumable_upload(insert_request):
             time.sleep(sleep_seconds)
 
 
-def upload(file, title, description="", category="22", keywords="", privacyStatus="public"):
+def upload(file: str, title: str, description: str="", category:str ="22", keywords: str="", privacyStatus: str="public") -> None:
     youtube = get_authenticated_service()
     try:
         initialize_upload(youtube, {"file": file, "title": title, "description": description,

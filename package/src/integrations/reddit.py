@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from PIL import Image
+from dacite import from_dict
 from requests import get
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
@@ -36,7 +37,7 @@ class Data:
     gilded: int
     clicked: bool
     title: str
-    link_flair_richtext: List[str]
+    link_flair_richtext: Union[List[str],List[dict]]
     subreddit_name_prefixed: str
     hidden: bool
     pwls: int
@@ -208,20 +209,13 @@ def remove_element(driver, by: By, path):
 
 
 def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
-    while True:
-        try:
+    response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers={
+                    'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
+    if not response.ok:
+        raise Exception("Reddit response not ok: ", response.content)
 
-            response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers={
-                           'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
-            if not response.ok:
-                raise Exception(
-                    "Reddit response not ok: ", response.content)
-
-            data = json.loads(response.text)
-            return data["data"]["children"]
-        except Exception as e:
-            print(f"Errore: {e}. Riprovo tra 10 secondi...")
-            time.sleep(10)
+    data = json.loads(response.text)
+    return [from_dict(data_class=RedditPost, data=d) for d in data["data"]["children"]]
 
 
 def get_screenshot_of_post(post_data, image_name):
@@ -290,14 +284,13 @@ def get_screenshot_of_post(post_data, image_name):
     driver.quit()
 
 
-def get_post(subreddit, trend: Trend):
+def get_post(subreddit: str, trend: Trend) -> tuple[str, str]:
     logging.info(f"Handling scraping reddit post: {subreddit}")
 
     posts: list[RedditPost] = get_post_lists(subreddit, trend)
     target_dir = work_dir(f"{uuid4()}.png")
-    post: RedditPost = get_unused_id_dict(
-        {"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+    post: RedditPost = get_unused_id_dict({"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
 
-    get_screenshot_of_post(post["data"], target_dir)
+    get_screenshot_of_post(post.data, target_dir)
     logging.info("Scraped reddit post: %s", target_dir)
-    return target_dir, post["data"]["title"]
+    return target_dir, post.data.title

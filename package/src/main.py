@@ -1,5 +1,4 @@
 import logging as logger
-import os
 import ssl
 
 from dotenv import load_dotenv
@@ -14,10 +13,10 @@ from youtube import upload
 logger.basicConfig(format="[%(asctime)s] - %(message)s", level=logger.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
-ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def main():
+    ssl._create_default_https_context = ssl._create_unverified_context # type: ignore
     logger.info('Inizio processo di scraping e upload.')
     load_dotenv("/app/keys/.env")
 

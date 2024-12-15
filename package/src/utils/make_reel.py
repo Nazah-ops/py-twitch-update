@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
-from integrations.pexel import Orientation, Pexel
+from integrations.pexel import Orientation, get_video
 from integrations.reddit import Trend, get_post
 from integrations.spotify import SpotifyClientHandler
 from utils.globals import work_dir
@@ -18,15 +18,10 @@ def make_reel():
     spotyHandler = SpotifyClientHandler()
     soundeffect = spotyHandler.get_song_for_reel()
 
-    background = get_background_video()
+    video = get_video("dark", Orientation.PORTRAIT)
     
-    return compose(image=reddit_image, background_video=background, sound=soundeffect), title, "horrorstoy,reddithorror,shorthorrorstory,reddit,horror,scarystories,horrorstories,redditstories,scary,twosentencehorror,twosentencestories"
+    return compose(image=reddit_image, background_video=video, sound=soundeffect), title, "horrorstoy,reddithorror,shorthorrorstory,reddit,horror,scarystories,horrorstories,redditstories,scary,twosentencehorror,twosentencestories"
 
-def get_background_video():
-    pexel = Pexel()
-    pexel_video = pexel.get_video("dark", Orientation.PORTRAIT)
-    
-    return pexel_video
 
 def compose(image, background_video, sound):
     
