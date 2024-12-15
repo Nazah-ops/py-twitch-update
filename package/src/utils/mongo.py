@@ -1,12 +1,11 @@
-from dataclasses import is_dataclass
 import logging as logger
-from datetime import datetime
 import os
-from typing import Any, List
+from datetime import datetime
+from typing import Any, List, Optional, Union
 
 from pymongo import MongoClient
 
-client: MongoClient = None
+client: Optional[MongoClient] = None
 
 def init_mongo_client():
     global client
@@ -24,69 +23,65 @@ def init_mongo_client():
 
 def get_mongo_client():
     global client
-    if client == None:
-        init_mongo_client()
+    if client is not None:
+        return client
+    init_mongo_client()
     return client
 
 def close_mongo_client():
     global client
-    client.close();
+    if client is not None:
+        client.close();
     
     
     
-def trova_per_valori(obj_list: List[Any], field_name: List[str], values: List[Any]) -> List[Any]:
-    """
-    Filtra una lista di istanze di dataclass in cui il valore del campo specificato corrisponde a uno dei valori nella lista fornita.
-
-    :param obj_list: Lista di istanze di dataclass.
-    :param field_name: Percorso del campo come lista di stringhe per supportare campi non stringa.
-    :param values: Lista di valori da cercare nel campo specificato.
-    :return: Lista di oggetti che corrispondono al criterio.
-    """
-    def get_nested_value(obj, field_path):
-        """
-        Ritorna il valore di un campo annidato.
-        """
-        for field in field_path:
-            if is_dataclass(obj):
-                obj = getattr(obj, field, None)
-            else:
-                return None
-        return obj
-
-    # Restituisce solo gli oggetti il cui valore nel campo specificato non è presente nella lista "values"
-    return [obj for obj in obj_list if get_nested_value(obj, field_name) not in values]
-
-def get_unused_id_dict(query: dict, objects: list[Any], id_key: List[str]):
+def get_unused_id_dict(query: dict, data_objects: list[Any], id_path: List[str]):
     """
         Esegue una chiamata al backend, per controllare se quali id trovati con la query fornita sia gia' stato utilizzato, restituendo un id inutilizzato.
         Se tutti gli id forniti dovessero essere gia' stati utilizzati, allora pulisce tutti gli id a backend, per poi continuare il ciclo.
         Questa funzione permette di utilizzare tutti gli id costantemente senza sovrapporli
         Parametri: query: con cui si trovano gli id, objects: gli id trovati, 
     """
-    client = get_mongo_client()["db"]["scraper"]
+    db = get_mongo_client()
+    assert db is not None, "Db non inizializzato"
+
+    collection = db["db"]["scraper"]
+    saved_ids: set[str] = set([doc["idResult"] for doc in collection.find({**query}, {"idResult": 1, "_id": 0})])
     now = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-    for object in objects:
-        used_keys = client.find({query** })
-        object_id = trova_per_valori(object, used_keys, id_key)
-        client.insert_one({ **query, "idResult":object_id, "createdAt": now })
-        return object
+    first = find_first_missing(data_objects=data_objects, id_path=id_path, saved_ids=saved_ids)
+    
+    if first:
+        collection.insert_one({ **query, "idResult": get_field_by_path(first, id_path), "createdAt": now })
+        return first
     
     """ All the elements were used """
     logger.info("All the sources were used, resetting..")
-    object_id = find_key_in_dict(objects[0], id_key)
-    client.delete_many(query)
-    client.insert_one({ **query, "idResult": object_id, "createdAt": now })
-    return objects[0]
+    collection.delete_many({**query})
+    collection.insert_one({ **query, "idResult": get_field_by_path(data_objects[0], id_path), "createdAt": now })
+    return data_objects[0]
 
-def find_key_in_dict(json, nome_chiave):
-    # Se la chiave è presente al livello corrente, restituisci il valore
-    if nome_chiave in json:
-        return json[nome_chiave]
-    # Altrimenti, cerca nelle sottostrutture se sono dizionari
-    for chiave, valore in json.items():
-        if isinstance(valore, dict):
-            risultato = find_key_in_dict(valore, nome_chiave)
-            if risultato is not None:
-                return risultato
-    return None
+
+
+def find_first_missing(data_objects: List[Any], id_path: List[str], saved_ids: set[str]) -> Any:
+    """
+    Trova il primo oggetto il cui ID (specificato dal percorso) non è presente nei saved_ids.
+    """
+    for obj in data_objects:
+        object_id = get_field_by_path(obj, id_path)
+        if object_id and object_id not in saved_ids:
+            return obj  # Ritorna il primo oggetto mancante
+    return None  # Nessun oggetto mancante trovato
+
+from typing import Any, List
+
+
+def get_field_by_path(obj: Any, path: List[str]) -> Any:
+    """
+    Accede a un campo di un dataclass annidato seguendo un percorso specificato come lista di attributi.
+    """
+    for attr in path:
+        if not hasattr(obj, attr):
+            return None  # Il percorso non è valido
+        obj = getattr(obj, attr)
+    return obj
+
