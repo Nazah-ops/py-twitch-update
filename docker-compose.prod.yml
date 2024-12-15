@@ -4,8 +4,7 @@ services:
       context: .
       dockerfile: ./deploy/Dockerfile.prod
     container_name: scraper-process-prod
-    volumes:
-      - ./package:/app
-      - /app/files
     environment:
       - ENV=PROD
+    env_file:
+      - .env

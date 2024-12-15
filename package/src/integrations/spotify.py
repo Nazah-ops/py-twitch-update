@@ -1,5 +1,6 @@
+import logging as logger
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import List, Optional
 from uuid import uuid4
 
@@ -120,8 +121,10 @@ class SpotifyClientHandler:
         
         # Seleziona una canzone non ancora utilizzata
         # La funzione get_unused_id verifica che la canzone non sia già stata utilizzata
-        song_url: str = get_unused_id_dict({"source" : "spotify", "query": url}, [asdict(song) for song in sorted_songs], 'url')["url"]
-        path = self.download_song(song_url)
+        song_data: SongMetaData = get_unused_id_dict({"source" : "spotify", "query": url}, sorted_songs, ['url'])
+        
+        logger.info("Fetched song: %s, %s", song_data.name, song_data.url)
+        path = self.download_song(song_data.url)
         
         final_path = work_dir(f"{uuid4()}.mp3")
         self.segment_music_drop(audio_path=path, destination=final_path)

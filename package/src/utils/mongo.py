@@ -42,6 +42,9 @@ def get_unused_id_dict(query: dict, data_objects: list[Any], id_path: List[str])
         Questa funzione permette di utilizzare tutti gli id costantemente senza sovrapporli
         Parametri: query: con cui si trovano gli id, objects: gli id trovati, 
     """
+    if get_field_by_path(data_objects[0], id_path) is None:
+        raise Exception("Given dataclass has no id, stopping execution")
+    
     db = get_mongo_client()
     assert db is not None, "Db non inizializzato"
 
