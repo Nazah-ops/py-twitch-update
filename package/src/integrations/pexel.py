@@ -1,7 +1,7 @@
-from dataclasses import dataclass, is_dataclass
 import http.client
 import json
 import logging
+from dataclasses import dataclass, is_dataclass
 from enum import Enum
 from typing import Any, List, Optional
 from uuid import uuid4
@@ -62,14 +62,14 @@ class Video:
     video_files: List[VideoFile]
     video_pictures: List[VideoPicture]
 
-def get_video(topic,  orientation: Orientation):
+def get_video(topic: str,  orientation: Orientation) -> str:
     """ 
         Downloads a video from pexel given the topic, then returns the name of the video
     """
     logging.info(f"Handling download background video: {topic} {orientation}")
     video_list: list[Video] = get_video_query(topic,  orientation)
-    video_source = get_unused_id_dict({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,'url')['video_files']
-    url = max(video_source, key=lambda x: x['size'])['link']
+    video_meta_data: Video = get_unused_id_dict({"query": topic, "orientation": orientation.value, "source":"pexel.com"}, video_list,['url'])
+    url = max(video_meta_data.video_files, key=lambda video: video.size).link
     
     video_name = work_dir(f"{uuid4()}.mp4")
     download(url, video_name)
@@ -87,8 +87,7 @@ def get_video_query(topic: str,  orientation: Orientation) -> list[Video]:
     headers = {
         'Authorization': 'yL7ewVOVKa8nh1pR7koTTlntKO1IkNvWMoQRP4I0ANfFr0ev1F0mIAjo',
     }
-    conn.request(
-        "GET", f"/videos/search?query={topic}&per_page=5&orientation={orientation.value}", {}, headers)
+    conn.request("GET", f"/videos/search?query={topic}&per_page=15&orientation={orientation.value}", {}, headers)
     data = conn.getresponse().read().decode("utf-8")
     videos = [from_dict(data_class=Video, data=video_dict) for video_dict in json.loads(data)["videos"]]
     return [video for video in videos if video.height >= 1920]

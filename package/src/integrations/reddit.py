@@ -7,8 +7,8 @@ from io import BytesIO
 from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
-from PIL import Image
 from dacite import from_dict
+from PIL import Image
 from requests import get
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
@@ -17,6 +17,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
 from utils.globals import work_dir
 from utils.mongo import get_unused_id_dict
 
@@ -27,7 +28,7 @@ class MediaEmbed:
 
 
 @dataclass
-class Data:
+class PostData:
     approved_at_utc: Optional[float]
     subreddit: str
     selftext: str
@@ -37,7 +38,7 @@ class Data:
     gilded: int
     clicked: bool
     title: str
-    link_flair_richtext: Union[List[str],List[dict]]
+    link_flair_richtext: Union[List[str], List[dict]]
     subreddit_name_prefixed: str
     hidden: bool
     pwls: int
@@ -135,7 +136,7 @@ class Data:
 @dataclass
 class RedditPost:
     kind: str
-    data: Data
+    data: PostData
 
 
 class Trend(Enum):
@@ -200,7 +201,7 @@ def login(driver, username, password):
         print(f"Errore durante il processo di login: {e}")
 
 
-def remove_element(driver, by: By, path):
+def remove_element(driver, by, path):
     element = driver.find_element(by, path)
     driver.execute_script("""
         var element = arguments[0];
@@ -210,7 +211,7 @@ def remove_element(driver, by: By, path):
 
 def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
     response = get(f'''https://www.reddit.com/r/{subreddit}/{trend.value}/.json''', verify=False, headers={
-                    'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
+        'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'})
     if not response.ok:
         raise Exception("Reddit response not ok: ", response.content)
 
@@ -218,7 +219,7 @@ def get_post_lists(subreddit, trend: Trend) -> list[RedditPost]:
     return [from_dict(data_class=RedditPost, data=d) for d in data["data"]["children"]]
 
 
-def get_screenshot_of_post(post_data, image_name):
+def get_screenshot_of_post(post_data: PostData, image_name):
     zoom = 3
     options = Options()
     options.add_argument("--headless")
@@ -237,7 +238,7 @@ def get_screenshot_of_post(post_data, image_name):
     login(driver, "preludiodark@gmail.com", "gomma123")
 
     # Access main page
-    driver.get(post_data["url"])
+    driver.get(post_data.url)
 
     # Change theme to dark
     html = driver.find_element(By.XPATH, "/html")
@@ -268,7 +269,7 @@ def get_screenshot_of_post(post_data, image_name):
             element.style.width = '8vw';
         """, post_container)
 
-    post = driver.find_element(By.CSS_SELECTOR, "#" + post_data["name"])
+    post = driver.find_element(By.CSS_SELECTOR, "#" + post_data.name)
     # Make screenshot
     screenshot = driver.get_screenshot_as_png()
     # Ricarica la posizione dell'elemento
@@ -289,7 +290,8 @@ def get_post(subreddit: str, trend: Trend) -> tuple[str, str]:
 
     posts: list[RedditPost] = get_post_lists(subreddit, trend)
     target_dir = work_dir(f"{uuid4()}.png")
-    post: RedditPost = get_unused_id_dict({"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, "url")
+    post: RedditPost = get_unused_id_dict(
+        {"source": "reddit.com", "query": subreddit, "trend": trend.value}, posts, ["data", "permalink"])
 
     get_screenshot_of_post(post.data, target_dir)
     logging.info("Scraped reddit post: %s", target_dir)
