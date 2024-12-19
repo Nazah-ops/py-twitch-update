@@ -33,9 +33,9 @@ def main():
     # Controlla se l'ambiente è di produzione. Se sì, carica il video.
     # In ambienti non di produzione (es. sviluppo), il video non viene caricato.
     if os.environ.get('ENV') == "PROD":
-        upload(file=video, title=title)
         logger.info(
             "Uploading video to platform in PROD environment: %s", title)
+        upload(file=video, title=title)
     else:
         logger.info("Not uploaded to youtube, enviroment is: %s",
                     os.environ.get('ENV'))
