@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging as logger
 import os
 import random
 import time
@@ -128,7 +129,7 @@ def resumable_upload(insert_request):
     retry = 0
     while response is None:
         try:
-            print("Uploading file...")
+            logger.info("Uploading file...")
             status, response = insert_request.next_chunk()
             if response is not None:
                 if 'id' in response:
@@ -157,8 +158,12 @@ def resumable_upload(insert_request):
             time.sleep(sleep_seconds)
 
 
-def upload(file: str, title: str, description: str="", category:str ="22", keywords: str="", privacyStatus: str="public") -> None:
+def upload(file: str, title: str, description: str = "", category: str = "22", keywords: str = "", privacyStatus: str = "public") -> None:
     youtube = get_authenticated_service()
+
+    if title is None:
+        raise Exception("Youtube title cannot be None")
+
     try:
         initialize_upload(youtube, {"file": file, "title": title, "description": description,
                           "category": category, "keywords": keywords, "privacyStatus": privacyStatus})
